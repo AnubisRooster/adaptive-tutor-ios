@@ -7,10 +7,10 @@ import {
   ScrollView,
   ActivityIndicator,
   StyleSheet,
-  SafeAreaView,
   KeyboardAvoidingView,
   Platform,
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter, useLocalSearchParams } from "expo-router";
 import { getActiveStudentId } from "@/lib/session";
 import { getStudent, getSubject, getTopic, getMastery } from "@/lib/data";

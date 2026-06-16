@@ -7,8 +7,8 @@ import {
   ScrollView,
   ActivityIndicator,
   StyleSheet,
-  SafeAreaView,
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter, useLocalSearchParams } from "expo-router";
 import { listSubjects, listTopics, listSources } from "@/lib/data";
 import { ingestUrl, type IngestProgress } from "@/lib/ingest";
