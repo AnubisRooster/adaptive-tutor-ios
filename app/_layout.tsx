@@ -1,5 +1,12 @@
-import { useEffect, useState } from "react";
-import { View, Text, TouchableOpacity, ActivityIndicator, StyleSheet } from "react-native";
+import { useEffect, useRef, useState } from "react";
+import {
+  View,
+  Text,
+  TouchableOpacity,
+  ActivityIndicator,
+  AppState,
+  StyleSheet,
+} from "react-native";
 import { Stack } from "expo-router";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { StatusBar } from "expo-status-bar";
@@ -12,17 +19,30 @@ import { getBiometricLockEnabled, authenticateWithBiometrics } from "@/lib/biome
 export default function RootLayout() {
   const { success, error } = useMigrations(db, migrations);
   const [locked, setLocked] = useState<boolean | null>(null);
+  const lockEnabledRef = useRef(false);
 
   useEffect(() => {
     if (!success) return;
     try { seedBuiltinCurriculum(); } catch {}
     (async () => {
       const enabled = await getBiometricLockEnabled();
+      lockEnabledRef.current = enabled;
       if (!enabled) { setLocked(false); return; }
       const ok = await authenticateWithBiometrics();
       setLocked(!ok);
     })();
   }, [success]);
+
+  // Re-lock whenever the app leaves the foreground so returning to it requires
+  // re-authentication. Without this the Face ID gate only runs on cold start.
+  useEffect(() => {
+    const sub = AppState.addEventListener("change", (next) => {
+      if (next === "background" && lockEnabledRef.current) {
+        setLocked(true);
+      }
+    });
+    return () => sub.remove();
+  }, []);
 
   async function handleUnlock() {
     const ok = await authenticateWithBiometrics();

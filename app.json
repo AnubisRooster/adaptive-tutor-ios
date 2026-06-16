@@ -27,7 +27,14 @@
     "plugins": [
       "expo-router",
       "expo-secure-store",
-      "expo-sqlite"
+      "expo-sqlite",
+      [
+        "expo-local-authentication",
+        {
+          "faceIDPermission": "Adaptive Tutor uses Face ID to keep your learning profiles and API key private."
+        }
+      ],
+      "expo-notifications"
     ]
   }
 }

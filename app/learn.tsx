@@ -257,22 +257,28 @@ export default function LearnScreen() {
       {topic && (
         <View style={styles.actionBar}>
           <TouchableOpacity
-            style={styles.actionBtn}
+            style={[styles.actionBtn, busy && styles.actionBtnDisabled]}
             disabled={busy}
+            accessibilityRole="button"
+            accessibilityLabel="Teach me the next step"
             onPress={() => streamTutor("teach", `Please teach me the next step on "${topic.name}".`)}
           >
             <Text style={styles.actionBtnText}>Teach me</Text>
           </TouchableOpacity>
           <TouchableOpacity
-            style={styles.actionBtn}
+            style={[styles.actionBtn, busy && styles.actionBtnDisabled]}
             disabled={busy}
+            accessibilityRole="button"
+            accessibilityLabel={`Review${gaps.length ? ` ${gaps.length} open gaps` : ""}`}
             onPress={() => streamTutor("review")}
           >
             <Text style={styles.actionBtnText}>Review{gaps.length ? ` (${gaps.length})` : ""}</Text>
           </TouchableOpacity>
           <TouchableOpacity
-            style={[styles.actionBtn, styles.quizBtn]}
+            style={[styles.actionBtn, styles.quizBtn, busy && styles.actionBtnDisabled]}
             disabled={busy}
+            accessibilityRole="button"
+            accessibilityLabel="Start a quiz"
             onPress={() => router.push({ pathname: "/quiz", params: { subjectId, topicId } })}
             testID="quiz-btn"
           >
@@ -508,6 +514,7 @@ const styles = StyleSheet.create({
     backgroundColor: "#f9fafb",
   },
   actionBtnText: { fontSize: 13, fontWeight: "500", color: "#374151" },
+  actionBtnDisabled: { opacity: 0.45 },
   quizBtn: { backgroundColor: "#ede9fe", borderColor: "#c4b5fd" },
   quizBtnText: { color: "#7c3aed" },
   // Messages

@@ -9,6 +9,28 @@ import { fetch } from "expo/fetch";
 
 export const OPENROUTER_BASE = "https://openrouter.ai/api/v1";
 
+// Default timeout for non-streaming requests so a stalled connection surfaces
+// as an error instead of hanging the UI indefinitely.
+const REQUEST_TIMEOUT_MS = 30_000;
+
+/**
+ * Run an async request with an abort-based timeout. The streaming chat path
+ * deliberately does NOT use this, since a stream can legitimately stay open
+ * far longer than any single request timeout.
+ */
+async function withTimeout<T>(
+  fn: (signal: AbortSignal) => Promise<T>,
+  ms = REQUEST_TIMEOUT_MS
+): Promise<T> {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), ms);
+  try {
+    return await fn(controller.signal);
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
 // ---------- Catalog ----------
 
 export type OpenRouterModel = {
@@ -47,9 +69,12 @@ export function normalizeModel(raw: RawORModel): OpenRouterModel {
 }
 
 export async function fetchModelCatalog(): Promise<OpenRouterModel[]> {
-  const res = await fetch(`${OPENROUTER_BASE}/models`, {
-    headers: { Accept: "application/json" },
-  });
+  const res = await withTimeout((signal) =>
+    fetch(`${OPENROUTER_BASE}/models`, {
+      headers: { Accept: "application/json" },
+      signal,
+    })
+  );
   if (!res.ok)
     throw new Error(`OpenRouter catalog fetch failed: ${res.status} ${res.statusText}`);
   const json = (await res.json()) as { data?: RawORModel[] };
@@ -163,11 +188,14 @@ export async function openrouterChatOnce(
   messages: ORMessage[],
   opts: ChatOpts = {}
 ): Promise<string> {
-  const res = await fetch(`${OPENROUTER_BASE}/chat/completions`, {
-    method: "POST",
-    headers: buildHeaders(apiKey),
-    body: JSON.stringify(buildBody(model, messages, opts, false)),
-  });
+  const res = await withTimeout((signal) =>
+    fetch(`${OPENROUTER_BASE}/chat/completions`, {
+      method: "POST",
+      headers: buildHeaders(apiKey),
+      body: JSON.stringify(buildBody(model, messages, opts, false)),
+      signal,
+    })
+  );
 
   if (!res.ok) {
     const errText = await res.text().catch(() => res.statusText);
@@ -183,9 +211,12 @@ export async function openrouterChatOnce(
 /** Validate an OpenRouter API key by hitting the /auth/key endpoint. */
 export async function validateApiKey(apiKey: string): Promise<boolean> {
   try {
-    const res = await fetch(`${OPENROUTER_BASE}/auth/key`, {
-      headers: { Authorization: `Bearer ${apiKey}` },
-    });
+    const res = await withTimeout((signal) =>
+      fetch(`${OPENROUTER_BASE}/auth/key`, {
+        headers: { Authorization: `Bearer ${apiKey}` },
+        signal,
+      })
+    );
     return res.ok;
   } catch {
     return false;

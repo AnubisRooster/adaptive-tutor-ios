@@ -1,4 +1,4 @@
-import { extractText, fetchPageText } from "@/lib/html";
+import { extractText, fetchPageText, assertSafeUrl } from "@/lib/html";
 
 describe("extractText", () => {
   it("strips script tags and their content", () => {
@@ -68,5 +68,34 @@ describe("fetchPageText", () => {
   it("throws on HTTP error response", async () => {
     fetchSpy.mockResolvedValueOnce({ ok: false, status: 404 } as unknown as Response);
     await expect(fetchPageText("https://example.com/404")).rejects.toThrow("HTTP 404");
+  });
+
+  it("rejects non-http(s) schemes without fetching", async () => {
+    await expect(fetchPageText("file:///etc/passwd")).rejects.toThrow(/http and https/);
+    expect(fetchSpy).not.toHaveBeenCalled();
+  });
+
+  it("rejects loopback and private-network hosts without fetching", async () => {
+    await expect(fetchPageText("http://localhost:8080/admin")).rejects.toThrow(/private-network/);
+    await expect(fetchPageText("http://127.0.0.1/")).rejects.toThrow(/private-network/);
+    await expect(fetchPageText("http://192.168.1.1/")).rejects.toThrow(/private-network/);
+    expect(fetchSpy).not.toHaveBeenCalled();
+  });
+});
+
+describe("assertSafeUrl", () => {
+  it("accepts ordinary http and https URLs", () => {
+    expect(assertSafeUrl("https://example.com/page").hostname).toBe("example.com");
+    expect(assertSafeUrl("http://news.example.org").protocol).toBe("http:");
+  });
+
+  it("throws on malformed input", () => {
+    expect(() => assertSafeUrl("not a url")).toThrow(/valid URL/);
+  });
+
+  it("blocks link-local metadata-style addresses", () => {
+    expect(() => assertSafeUrl("http://169.254.169.254/latest/meta-data")).toThrow(
+      /private-network/
+    );
   });
 });
