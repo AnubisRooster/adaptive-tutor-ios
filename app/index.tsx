@@ -6,6 +6,8 @@ import {
   TextInput,
   TouchableOpacity,
   Modal,
+  KeyboardAvoidingView,
+  Platform,
   StyleSheet,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -67,8 +69,12 @@ export default function ProfilesScreen() {
       setError("Please enter a name.");
       return;
     }
+    if (newPin && newPin.length < 4) {
+      setError("PIN must be at least 4 digits (or leave it blank).");
+      return;
+    }
     try {
-      createStudent({
+      const created = createStudent({
         name: newName.trim(),
         color: newColor,
         pin: newPin.trim() || undefined,
@@ -77,9 +83,9 @@ export default function ProfilesScreen() {
       setNewName("");
       setNewColor(COLORS[0]);
       setNewPin("");
-      const updated = listStudents();
-      setStudents(updated);
-      const created = updated.find((s) => s.name === newName.trim());
+      setStudents(listStudents());
+      // Select the exact profile we just created (by id) rather than matching
+      // on name, which would pick the wrong one when names collide.
       if (created) await selectStudent(created);
     } catch (e) {
       setError(String(e));
@@ -102,6 +108,8 @@ export default function ProfilesScreen() {
               key={s.id}
               style={styles.profileCard}
               onPress={() => selectStudent(s)}
+              accessibilityRole="button"
+              accessibilityLabel={`Select profile ${s.name}${s.pinHash ? ", PIN protected" : ""}`}
             >
               <ProfileAvatar name={s.name} color={s.color} size={64} />
               <Text style={styles.profileName}>{s.name}</Text>
@@ -112,6 +120,8 @@ export default function ProfilesScreen() {
           <TouchableOpacity
             style={[styles.profileCard, styles.newCard]}
             onPress={() => setCreating(true)}
+            accessibilityRole="button"
+            accessibilityLabel="Create a new profile"
           >
             <View style={styles.plusCircle}>
               <Text style={styles.plusText}>+</Text>
@@ -125,7 +135,10 @@ export default function ProfilesScreen() {
 
       {/* PIN modal */}
       <Modal visible={pinFor !== null} transparent animationType="fade">
-        <View style={styles.overlay}>
+        <KeyboardAvoidingView
+          style={styles.overlay}
+          behavior={Platform.OS === "ios" ? "padding" : undefined}
+        >
           <View style={styles.modalBox}>
             <Text style={styles.modalTitle}>Enter PIN for {pinFor?.name}</Text>
             <Text style={styles.modalSubtitle}>This profile is PIN protected.</Text>
@@ -158,12 +171,19 @@ export default function ProfilesScreen() {
               <Text style={styles.cancelBtnText}>Cancel</Text>
             </TouchableOpacity>
           </View>
-        </View>
+        </KeyboardAvoidingView>
       </Modal>
 
       {/* Create profile modal */}
       <Modal visible={creating} transparent animationType="slide">
-        <View style={styles.overlay}>
+        <KeyboardAvoidingView
+          style={styles.overlay}
+          behavior={Platform.OS === "ios" ? "padding" : undefined}
+        >
+          <ScrollView
+            contentContainerStyle={styles.modalScroll}
+            keyboardShouldPersistTaps="handled"
+          >
           <View style={styles.modalBox}>
             <Text style={styles.modalTitle}>Create a profile</Text>
 
@@ -216,7 +236,8 @@ export default function ProfilesScreen() {
               <Text style={styles.cancelBtnText}>Cancel</Text>
             </TouchableOpacity>
           </View>
-        </View>
+          </ScrollView>
+        </KeyboardAvoidingView>
       </Modal>
     </SafeAreaView>
   );
@@ -260,6 +281,12 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
     padding: 20,
+  },
+  modalScroll: {
+    flexGrow: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    width: "100%",
   },
   modalBox: {
     width: "100%",
