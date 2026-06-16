@@ -394,6 +394,18 @@ export default function LearnScreen() {
               );
             }}
           />
+
+          {/* Add material link */}
+          <TouchableOpacity
+            style={styles.addMaterialBtn}
+            onPress={() => {
+              setNavOpen(false);
+              router.push({ pathname: "/ingest", params: { subjectId } });
+            }}
+            testID="add-material-btn"
+          >
+            <Text style={styles.addMaterialText}>+ Add material (URL)</Text>
+          </TouchableOpacity>
         </View>
       </Modal>
     </SafeAreaView>
@@ -606,4 +618,10 @@ const styles = StyleSheet.create({
   topicRowActive: { backgroundColor: "#eef2ff" },
   topicRowName: { fontSize: 14, fontWeight: "500", color: "#111" },
   topicRowNameActive: { color: "#6366f1" },
+  addMaterialBtn: {
+    padding: 14,
+    borderTopWidth: 1,
+    borderColor: "#e5e7eb",
+  },
+  addMaterialText: { fontSize: 14, color: "#6366f1", fontWeight: "500" },
 });
