@@ -7,8 +7,8 @@ import {
   TouchableOpacity,
   Modal,
   StyleSheet,
-  SafeAreaView,
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 import { listStudents, createStudent, verifyPin } from "@/lib/data";
 import { setActiveStudentId } from "@/lib/session";
