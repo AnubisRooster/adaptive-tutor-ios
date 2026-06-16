@@ -1,0 +1,236 @@
+/**
+ * Gamification engine: XP, learner levels, daily streaks, and achievement badges.
+ *
+ * Pure functions (levelForXp, computeStreak, xpForQuiz) are fully unit-testable.
+ * Orchestrators (awardForGrade, awardForTeach) call lib/data to persist state.
+ */
+
+import type { Grade } from "@/lib/schemas";
+import { ACHIEVEMENTS, type AchievementDef, type AchievementSnapshot } from "@/lib/gamify-catalog";
+
+// ---------- Levels ----------
+
+export type LevelInfo = {
+  level: number;
+  title: string;
+  levelFloorXp: number;
+  nextLevelXp: number;
+};
+
+const LEVELS: { xp: number; title: string }[] = [
+  { xp: 0, title: "Novice" },
+  { xp: 50, title: "Apprentice" },
+  { xp: 150, title: "Student" },
+  { xp: 350, title: "Scholar" },
+  { xp: 700, title: "Adept" },
+  { xp: 1200, title: "Expert" },
+  { xp: 2000, title: "Master" },
+  { xp: 3200, title: "Sage" },
+  { xp: 5000, title: "Luminary" },
+];
+
+export function levelForXp(xp: number): LevelInfo {
+  let idx = 0;
+  for (let i = LEVELS.length - 1; i >= 0; i--) {
+    if (xp >= LEVELS[i].xp) {
+      idx = i;
+      break;
+    }
+  }
+  return {
+    level: idx + 1,
+    title: LEVELS[idx].title,
+    levelFloorXp: LEVELS[idx].xp,
+    nextLevelXp: idx + 1 < LEVELS.length ? LEVELS[idx + 1].xp : LEVELS[idx].xp,
+  };
+}
+
+// ---------- XP awards ----------
+
+export const XP_TEACH = 5;
+
+export function xpForQuiz({
+  score,
+  bloomLevel,
+  gapCleared,
+}: {
+  score: number;
+  bloomLevel: number;
+  gapCleared: boolean;
+}): number {
+  const base = Math.round(5 + score * 15);
+  const bloomBonus = (bloomLevel - 1) * 2;
+  const gapBonus = gapCleared ? 10 : 0;
+  return base + bloomBonus + gapBonus;
+}
+
+// ---------- Streak ----------
+
+export function computeStreak(
+  prevCount: number,
+  prevDay: string | null,
+  today: string
+): { count: number; day: string } {
+  if (!prevDay) return { count: 1, day: today };
+  if (prevDay === today) return { count: prevCount, day: today };
+  const prev = new Date(prevDay + "T00:00:00Z");
+  const cur = new Date(today + "T00:00:00Z");
+  const diffDays = Math.round((cur.getTime() - prev.getTime()) / 86_400_000);
+  if (diffDays === 1) return { count: prevCount + 1, day: today };
+  return { count: 1, day: today };
+}
+
+function todayUtc(): string {
+  return new Date().toISOString().slice(0, 10);
+}
+
+// ---------- Achievements ----------
+
+export type GamifyResult = {
+  xpGained: number;
+  totalXp: number;
+  prevLevel: LevelInfo;
+  newLevel: LevelInfo;
+  leveledUpLevel: boolean;
+  newBadges: AchievementDef[];
+  streak: number;
+};
+
+// ---------- Orchestrators (require data layer — used in Phase 4+) ----------
+
+function buildSnapshot(studentId: string, currentStreak: number): AchievementSnapshot {
+  // Lazy import to avoid circular deps and allow testing pure functions without a DB.
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const data = require("@/lib/data") as typeof import("@/lib/data");
+  const masteryMap = data.getMasteryMap(studentId);
+  let bestScore = 0;
+  let maxBloom = 1;
+  for (const m of masteryMap.values()) {
+    if (m.bloomLevel > maxBloom) maxBloom = m.bloomLevel;
+    try {
+      const prog = JSON.parse(m.progress ?? "{}") as Record<
+        string,
+        { lastScore?: number | null }
+      >;
+      for (const entry of Object.values(prog)) {
+        if (entry.lastScore != null && entry.lastScore > bestScore) bestScore = entry.lastScore;
+      }
+    } catch {
+      // ignore
+    }
+  }
+  return {
+    masteredTopicsCount: data.countMasteredTopics(studentId),
+    clearedGapsCount: data.countClearedGaps(studentId),
+    streakCount: currentStreak,
+    touchedSubjectsCount: data.listTouchedSubjectIds(studentId).length,
+    bestScore,
+    maxBloom,
+  };
+}
+
+function checkAndGrantAchievements(
+  studentId: string,
+  snapshot: AchievementSnapshot
+): AchievementDef[] {
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const data = require("@/lib/data") as typeof import("@/lib/data");
+  const earned = new Set(data.listAchievements(studentId).map((a) => a.code));
+  const newBadges: AchievementDef[] = [];
+  for (const def of ACHIEVEMENTS) {
+    if (!earned.has(def.code) && def.predicate(snapshot)) {
+      const granted = data.grantAchievement(studentId, def.code);
+      if (granted) newBadges.push(def);
+    }
+  }
+  return newBadges;
+}
+
+export function awardForGrade(
+  studentId: string,
+  opts: { grade: Grade; bloomLevel: number; gapCleared: boolean }
+): GamifyResult {
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const data = require("@/lib/data") as typeof import("@/lib/data");
+  const student = data.getStudent(studentId);
+  const prevXp = student?.xp ?? 0;
+  const prevLevel = levelForXp(prevXp);
+
+  const xpGained = xpForQuiz({
+    score: opts.grade.score ?? (opts.grade.correct ? 1 : 0),
+    bloomLevel: opts.bloomLevel,
+    gapCleared: opts.gapCleared,
+  });
+
+  const totalXp = data.addXp(studentId, xpGained);
+  const newLevel = levelForXp(totalXp);
+
+  const today = todayUtc();
+  const prev = computeStreak(student?.streakCount ?? 0, student?.streakLastDay ?? null, today);
+  data.setStreak(studentId, prev.count, prev.day);
+
+  const snapshot = buildSnapshot(studentId, prev.count);
+  const newBadges = checkAndGrantAchievements(studentId, snapshot);
+
+  return {
+    xpGained,
+    totalXp,
+    prevLevel,
+    newLevel,
+    leveledUpLevel: newLevel.level > prevLevel.level,
+    newBadges,
+    streak: prev.count,
+  };
+}
+
+export function awardForTeach(studentId: string): { totalXp: number; streak: number } {
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const data = require("@/lib/data") as typeof import("@/lib/data");
+  const student = data.getStudent(studentId);
+  const totalXp = data.addXp(studentId, XP_TEACH);
+
+  const today = todayUtc();
+  const prev = computeStreak(student?.streakCount ?? 0, student?.streakLastDay ?? null, today);
+  data.setStreak(studentId, prev.count, prev.day);
+
+  return { totalXp, streak: prev.count };
+}
+
+export function gamifySummary(studentId: string): {
+  xp: number;
+  level: number;
+  title: string;
+  levelFloorXp: number;
+  nextLevelXp: number;
+  streak: number;
+  shareStats: boolean;
+  badges: { code: string; title: string; description: string; emoji: string; earnedAt: number }[];
+} {
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const data = require("@/lib/data") as typeof import("@/lib/data");
+  const student = data.getStudent(studentId);
+  const xp = student?.xp ?? 0;
+  const info = levelForXp(xp);
+  const earned = data.listAchievements(studentId);
+  const badgeMap = new Map(ACHIEVEMENTS.map((a) => [a.code, a]));
+  const badges = earned.map((a) => {
+    const def = badgeMap.get(a.code);
+    return {
+      code: a.code,
+      title: def?.title ?? a.code,
+      description: def?.description ?? "",
+      emoji: def?.emoji ?? "🏅",
+      earnedAt: a.earnedAt,
+    };
+  });
+  return {
+    xp,
+    level: info.level,
+    title: info.title,
+    levelFloorXp: info.levelFloorXp,
+    nextLevelXp: info.nextLevelXp,
+    streak: student?.streakCount ?? 0,
+    shareStats: student?.shareStats ?? false,
+    badges,
+  };
+}
