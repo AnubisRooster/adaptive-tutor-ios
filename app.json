@@ -1,15 +1,18 @@
 {
   "expo": {
-    "name": "adaptive-tutor-ios",
+    "name": "Adaptive Tutor",
     "slug": "adaptive-tutor-ios",
     "version": "1.0.0",
+    "scheme": "adaptivetutor",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
-    "userInterfaceStyle": "light",
+    "userInterfaceStyle": "automatic",
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "com.adaptivetutor.app"
     },
     "android": {
+      "package": "com.adaptivetutor.app",
       "adaptiveIcon": {
         "backgroundColor": "#E6F4FE",
         "foregroundImage": "./assets/android-icon-foreground.png",
@@ -20,6 +23,10 @@
     },
     "web": {
       "favicon": "./assets/favicon.png"
-    }
+    },
+    "plugins": [
+      "expo-router",
+      "expo-secure-store"
+    ]
   }
 }
