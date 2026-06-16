@@ -28,6 +28,7 @@ import {
 import { buildTutorTurn } from "@/lib/orchestrator";
 import { resolveLlmConfig, streamChat } from "@/lib/llm";
 import { recommendStartTopic } from "@/lib/adaptive";
+import { awardForTeach } from "@/lib/gamify";
 import ProfileAvatar from "@/components/ProfileAvatar";
 import MasteryBar from "@/components/MasteryBar";
 import MarkdownText from "@/components/MarkdownText";
@@ -167,11 +168,14 @@ export default function LearnScreen() {
         updateLastAssistant(acc);
         scrollRef.current?.scrollToEnd({ animated: false });
       }
-      // Persist to DB
+      // Persist to DB and award XP for teach turns
       if (userText) {
         const session = getOrCreateSession(student.id, subjectId);
         addMessage({ sessionId: session.id, studentId: student.id, role: "user", content: userText, topicId });
         addMessage({ sessionId: session.id, studentId: student.id, role: "assistant", content: acc, topicId });
+      }
+      if (mode === "teach") {
+        awardForTeach(student.id);
       }
     } catch (e) {
       const msg = String(e);
@@ -217,7 +221,7 @@ export default function LearnScreen() {
         <Text style={styles.headerTitle} numberOfLines={1}>
           {subject?.name ?? "Adaptive Tutor"}
         </Text>
-        <TouchableOpacity onPress={() => router.push("/settings")} style={styles.avatarBtn}>
+        <TouchableOpacity onPress={() => router.push("/progress")} style={styles.avatarBtn} testID="progress-btn">
           <ProfileAvatar name={student.name} color={student.color} size={30} />
         </TouchableOpacity>
         <TouchableOpacity style={styles.switchBtn} onPress={switchProfile}>
@@ -265,6 +269,14 @@ export default function LearnScreen() {
             onPress={() => streamTutor("review")}
           >
             <Text style={styles.actionBtnText}>Review{gaps.length ? ` (${gaps.length})` : ""}</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.actionBtn, styles.quizBtn]}
+            disabled={busy}
+            onPress={() => router.push({ pathname: "/quiz", params: { subjectId, topicId } })}
+            testID="quiz-btn"
+          >
+            <Text style={[styles.actionBtnText, styles.quizBtnText]}>Quiz me</Text>
           </TouchableOpacity>
         </View>
       )}
@@ -484,6 +496,8 @@ const styles = StyleSheet.create({
     backgroundColor: "#f9fafb",
   },
   actionBtnText: { fontSize: 13, fontWeight: "500", color: "#374151" },
+  quizBtn: { backgroundColor: "#ede9fe", borderColor: "#c4b5fd" },
+  quizBtnText: { color: "#7c3aed" },
   // Messages
   messageList: { flex: 1 },
   messageListContent: { padding: 12, gap: 10, paddingBottom: 20 },
