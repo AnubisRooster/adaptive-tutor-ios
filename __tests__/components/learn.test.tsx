@@ -45,6 +45,7 @@ jest.mock("@/lib/adaptive", () => ({
 jest.mock("@/lib/gamify", () => ({
   XP_TEACH: 5,
   addXp: jest.fn(),
+  awardForTeach: jest.fn().mockReturnValue({ totalXp: 10, streak: 1 }),
 }));
 
 import { streamChat, resolveLlmConfig } from "@/lib/llm";
@@ -70,10 +71,11 @@ describe("LearnScreen", () => {
     await findByText("Epistemology");
   });
 
-  it("renders 'Teach me' and 'Review' action buttons", async () => {
+  it("renders 'Teach me', 'Review', and 'Quiz me' action buttons", async () => {
     const { findByText } = await render(<LearnScreen />);
     await findByText("Teach me");
     await findByText("Review");
+    await findByText("Quiz me");
   });
 
   it("shows empty state when no messages", async () => {
