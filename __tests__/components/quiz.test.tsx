@@ -16,7 +16,7 @@ jest.mock("@/db", () => ({ db: {} }));
 jest.mock("@/lib/data", () => ({
   getStudent: jest.fn().mockReturnValue({
     id: "stu-1", name: "Alice", color: "#6366f1", xp: 0, openrouterModel: null,
-    pinHash: null, isAdmin: false, pacePref: "normal", tonePref: "encouraging",
+    ondeviceModel: null, pinHash: null, isAdmin: false, pacePref: "normal", tonePref: "encouraging",
     themePref: "system", llmProvider: "openrouter", streakCount: 0, streakLastDay: null,
     shareStats: false, createdAt: 0, lastActiveAt: 0,
   }),

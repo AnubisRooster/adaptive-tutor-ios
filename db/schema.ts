@@ -16,9 +16,10 @@ export const students = sqliteTable("students", {
   pacePref: text("pace_pref").notNull().default("normal"),
   tonePref: text("tone_pref").notNull().default("encouraging"),
   themePref: text("theme_pref").notNull().default("system"),
-  // LLM provider: "openrouter" only on iOS (no local Ollama)
+  // LLM provider: "openrouter" (cloud) or "on-device" (llama.rn Metal)
   llmProvider: text("llm_provider").notNull().default("openrouter"),
   openrouterModel: text("openrouter_model"),
+  ondeviceModel: text("ondevice_model"),
   // Gamification
   xp: integer("xp").notNull().default(0),
   streakCount: integer("streak_count").notNull().default(0),

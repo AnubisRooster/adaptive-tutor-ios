@@ -13,7 +13,7 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter, useLocalSearchParams } from "expo-router";
 import { getActiveStudentId } from "@/lib/session";
-import { getStudent, getSubject, getTopic, getMastery } from "@/lib/data";
+import { getStudent, getSubject, getTopic, getMastery as getMasteryRow } from "@/lib/data";
 import { resolveLlmConfig } from "@/lib/llm";
 import { generateQuizQuestion } from "@/lib/quiz-gen";
 import { gradeAnswer } from "@/lib/grader";
@@ -77,12 +77,15 @@ export default function QuizScreen() {
         cfg,
       });
       setGrade(g);
+      // Capture mastery before applying the grade so we can detect a threshold crossing.
+      const masteryBefore = getMasteryRow(student.id, topicId as string)?.mastery ?? 0;
       const ar = applyGrade(student.id, topicId as string, g);
       setApplyResult(ar);
       const gr = awardForGrade(student.id, {
         grade: g,
         bloomLevel: ar.mastery.bloomLevel,
-        gapCleared: ar.mastery.mastery >= 0.8,
+        // Award the gap-cleared bonus only when mastery crosses 0.8 on this attempt.
+        gapCleared: masteryBefore < 0.8 && ar.mastery.mastery >= 0.8,
       });
       setGamifyResult(gr);
       setPhase("result");
@@ -95,7 +98,7 @@ export default function QuizScreen() {
   const topicName = topicId ? (getTopic(topicId as string)?.name ?? "Topic") : "Topic";
   const subjectName = subjectId ? (getSubject(subjectId as string)?.name ?? "") : "";
   const currentMastery = student && topicId
-    ? getMastery(student.id, topicId as string)
+    ? getMasteryRow(student.id, topicId as string)
     : undefined;
 
   return (

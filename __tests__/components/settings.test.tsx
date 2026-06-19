@@ -21,13 +21,37 @@ jest.mock("@/lib/openrouter", () => ({
 }));
 jest.mock("@/lib/data", () => ({
   getStudent: jest.fn().mockReturnValue({
-    id: "stu-1", name: "Alice", openrouterModel: null,
+    id: "stu-1", name: "Alice", openrouterModel: null, ondeviceModel: null,
     color: "#6366f1", pinHash: null, isAdmin: false, pacePref: "normal",
     tonePref: "encouraging", themePref: "system", llmProvider: "openrouter",
     xp: 0, streakCount: 0, streakLastDay: null, shareStats: false,
     createdAt: 0, lastActiveAt: 0,
   }),
   updateStudentModel: jest.fn(),
+  updateStudentProvider: jest.fn(),
+  updateStudentOndeviceModel: jest.fn(),
+}));
+jest.mock("@/lib/ondevice", () => ({
+  ON_DEVICE_MODELS: [
+    { id: "llama-3.2-3b-q4", name: "Llama 3.2 3B (Q4_K_M)", description: "Best balance.", sizeBytes: 1_920_000_000, url: "https://example.com/model.gguf", recommended: true },
+  ],
+  isModelDownloaded: jest.fn().mockResolvedValue(false),
+  downloadModel: jest.fn().mockResolvedValue("/path/to/model.gguf"),
+  deleteModel: jest.fn().mockResolvedValue(undefined),
+  getActiveDownload: jest.fn().mockReturnValue(null),
+  formatBytes: (n: number) => `${(n / 1e9).toFixed(1)} GB`,
+}));
+jest.mock("@/lib/biometric", () => ({
+  isBiometricAvailable: jest.fn().mockResolvedValue(false),
+  getBiometricLockEnabled: jest.fn().mockResolvedValue(false),
+  setBiometricLockEnabled: jest.fn().mockResolvedValue(undefined),
+  authenticateWithBiometrics: jest.fn().mockResolvedValue(true),
+}));
+jest.mock("@/lib/notify", () => ({
+  requestNotificationPermission: jest.fn().mockResolvedValue(true),
+  scheduleDailyReminder: jest.fn().mockResolvedValue(undefined),
+  cancelDailyReminder: jest.fn().mockResolvedValue(undefined),
+  getReminderSettings: jest.fn().mockResolvedValue({ enabled: false, hour: 8 }),
 }));
 jest.mock("@/db", () => ({ db: {} }));
 

@@ -76,6 +76,7 @@ export function createStudent(input: {
     themePref: "system",
     llmProvider: "openrouter",
     openrouterModel: null,
+    ondeviceModel: null,
     xp: 0,
     streakCount: 0,
     streakLastDay: null,
@@ -103,6 +104,20 @@ export function updateStudentTheme(studentId: string, themePref: string): void {
 
 export function updateStudentModel(studentId: string, model: string | null): void {
   db.update(students).set({ openrouterModel: model }).where(eq(students.id, studentId)).run();
+}
+
+export function updateStudentProvider(
+  studentId: string,
+  provider: "openrouter" | "on-device"
+): void {
+  db.update(students).set({ llmProvider: provider }).where(eq(students.id, studentId)).run();
+}
+
+export function updateStudentOndeviceModel(
+  studentId: string,
+  modelId: string | null
+): void {
+  db.update(students).set({ ondeviceModel: modelId }).where(eq(students.id, studentId)).run();
 }
 
 export function updateStudentPrefs(

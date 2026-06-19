@@ -12,6 +12,7 @@ const student: Student = {
   themePref: "system",
   llmProvider: "openrouter",
   openrouterModel: null,
+  ondeviceModel: null,
   xp: 0,
   streakCount: 0,
   streakLastDay: null,

@@ -46,7 +46,7 @@ describe("ProfilesScreen", () => {
     mockList.mockReturnValue([
       { id: "s1", name: "Alice", color: "#6366f1", pinHash: null, isAdmin: false,
         pacePref: "normal", tonePref: "encouraging", themePref: "system",
-        llmProvider: "openrouter", openrouterModel: null, xp: 0, streakCount: 0,
+        llmProvider: "openrouter", openrouterModel: null, ondeviceModel: null, xp: 0, streakCount: 0,
         streakLastDay: null, shareStats: false, createdAt: 0, lastActiveAt: 0 },
     ]);
     const { getByText } = await render(<ProfilesScreen />);
@@ -71,7 +71,7 @@ describe("ProfilesScreen", () => {
     const created = {
       id: "s2", name: "Bob", color: "#ec4899", pinHash: null, isAdmin: false,
       pacePref: "normal", tonePref: "encouraging", themePref: "system",
-      llmProvider: "openrouter", openrouterModel: null, xp: 0, streakCount: 0,
+      llmProvider: "openrouter", openrouterModel: null, ondeviceModel: null, xp: 0, streakCount: 0,
       streakLastDay: null, shareStats: false, createdAt: 0, lastActiveAt: 0,
     };
     mockList.mockReturnValueOnce([]).mockReturnValueOnce([created]);
@@ -92,7 +92,7 @@ describe("ProfilesScreen", () => {
     mockList.mockReturnValue([
       { id: "s3", name: "Carol", color: "#10b981", pinHash: "hash123", isAdmin: false,
         pacePref: "normal", tonePref: "encouraging", themePref: "system",
-        llmProvider: "openrouter", openrouterModel: null, xp: 0, streakCount: 0,
+        llmProvider: "openrouter", openrouterModel: null, ondeviceModel: null, xp: 0, streakCount: 0,
         streakLastDay: null, shareStats: false, createdAt: 0, lastActiveAt: 0 },
     ]);
     const { getByText, findByText } = await render(<ProfilesScreen />);

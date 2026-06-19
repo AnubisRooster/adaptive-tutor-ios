@@ -13,6 +13,11 @@ export const OPENROUTER_BASE = "https://openrouter.ai/api/v1";
 // as an error instead of hanging the UI indefinitely.
 const REQUEST_TIMEOUT_MS = 30_000;
 
+// How long the streaming reader may stay idle (no bytes received) before the
+// connection is aborted. Covers mid-stream network stalls that a connection
+// timeout alone cannot catch.
+const STREAM_IDLE_TIMEOUT_MS = 90_000;
+
 /**
  * Run an async request with an abort-based timeout. The streaming chat path
  * deliberately does NOT use this, since a stream can legitimately stay open
@@ -101,6 +106,8 @@ export type ORMessage = {
 type ChatOpts = {
   temperature?: number;
   format?: object;
+  /** Override the per-stream idle timeout (ms). Defaults to STREAM_IDLE_TIMEOUT_MS. */
+  streamTimeoutMs?: number;
 };
 
 const APP_URL = "https://github.com/AnubisRooster/adaptive-tutor-ios";
@@ -142,13 +149,38 @@ export async function* openrouterChatStream(
   messages: ORMessage[],
   opts: ChatOpts = {}
 ): AsyncGenerator<string> {
-  const res = await fetch(`${OPENROUTER_BASE}/chat/completions`, {
-    method: "POST",
-    headers: buildHeaders(apiKey),
-    body: JSON.stringify(buildBody(model, messages, opts, true)),
-  });
+  const idleMs = opts.streamTimeoutMs ?? STREAM_IDLE_TIMEOUT_MS;
+  const controller = new AbortController();
+  let idleTimer: ReturnType<typeof setTimeout> | null = null;
+
+  function resetIdleTimer() {
+    if (idleTimer !== null) clearTimeout(idleTimer);
+    idleTimer = setTimeout(
+      () => controller.abort(new Error(`Stream idle for ${idleMs}ms — aborting.`)),
+      idleMs
+    );
+  }
+
+  resetIdleTimer();
+
+  let res: Awaited<ReturnType<typeof fetch>>;
+  try {
+    res = await fetch(`${OPENROUTER_BASE}/chat/completions`, {
+      method: "POST",
+      headers: buildHeaders(apiKey),
+      body: JSON.stringify(buildBody(model, messages, opts, true)),
+      signal: controller.signal,
+    });
+  } catch (err) {
+    if (idleTimer !== null) clearTimeout(idleTimer);
+    if (controller.signal.aborted) {
+      throw new Error(`OpenRouter stream timed out after ${idleMs}ms with no data.`);
+    }
+    throw err;
+  }
 
   if (!res.ok || !res.body) {
+    if (idleTimer !== null) clearTimeout(idleTimer);
     const errText = await res.text().catch(() => res.statusText);
     throw new Error(`OpenRouter error ${res.status}: ${errText}`);
   }
@@ -157,27 +189,42 @@ export async function* openrouterChatStream(
   const decoder = new TextDecoder();
   let buf = "";
 
-  while (true) {
-    const { done, value } = await reader.read();
-    if (done) break;
-    buf += decoder.decode(value, { stream: true });
-    const lines = buf.split("\n");
-    buf = lines.pop() ?? "";
-    for (const line of lines) {
-      const trimmed = line.trim();
-      if (!trimmed.startsWith("data:")) continue;
-      const payload = trimmed.slice(5).trim();
-      if (payload === "[DONE]") return;
+  try {
+    while (true) {
+      let done: boolean;
+      let value: Uint8Array | undefined;
       try {
-        const ev = JSON.parse(payload) as {
-          choices?: { delta?: { content?: string } }[];
-        };
-        const chunk = ev.choices?.[0]?.delta?.content;
-        if (chunk) yield chunk;
-      } catch {
-        /* skip malformed SSE lines */
+        ({ done, value } = await reader.read());
+      } catch (err) {
+        if (controller.signal.aborted) {
+          throw new Error(`OpenRouter stream timed out after ${idleMs}ms with no data.`);
+        }
+        throw err;
+      }
+      if (done) break;
+      resetIdleTimer();
+      buf += decoder.decode(value, { stream: true });
+      const lines = buf.split("\n");
+      buf = lines.pop() ?? "";
+      for (const line of lines) {
+        const trimmed = line.trim();
+        if (!trimmed.startsWith("data:")) continue;
+        const payload = trimmed.slice(5).trim();
+        if (payload === "[DONE]") return;
+        try {
+          const ev = JSON.parse(payload) as {
+            choices?: { delta?: { content?: string } }[];
+          };
+          const chunk = ev.choices?.[0]?.delta?.content;
+          if (chunk) yield chunk;
+        } catch {
+          /* skip malformed SSE lines */
+        }
       }
     }
+  } finally {
+    if (idleTimer !== null) clearTimeout(idleTimer);
+    reader.releaseLock();
   }
 }
 

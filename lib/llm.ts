@@ -1,21 +1,31 @@
 /**
- * OpenRouter-only LLM dispatch layer for iOS.
- * All providers and structured outputs route through openrouter.ts.
- * The API key is read from the iOS Keychain (expo-secure-store), never from SQLite.
+ * LLM dispatch layer for iOS.
+ *
+ * Supports two providers:
+ *   "openrouter"  — cloud inference via OpenRouter; API key in iOS Keychain.
+ *   "on-device"   — local GGUF inference via llama.rn + Metal GPU; no network.
+ *
+ * All call sites use streamChat / chatOnce / streamStructured — they never
+ * need to know which provider is active.
  */
 
 import type { Student } from "@/db/schema";
 import { getStudent } from "@/lib/data";
 import { getApiKey } from "@/lib/key-store";
 import { openrouterChatStream, openrouterChatOnce } from "@/lib/openrouter";
+import {
+  onDeviceChatStream,
+  onDeviceChatOnce,
+  loadModel,
+} from "@/lib/ondevice";
 
-export type LlmProvider = "openrouter";
+// ---------- Types ----------
 
-export type LlmConfig = {
-  provider: LlmProvider;
-  model: string;
-  apiKey: string;
-};
+export type LlmProvider = "openrouter" | "on-device";
+
+export type LlmConfig =
+  | { provider: "openrouter"; model: string; apiKey: string }
+  | { provider: "on-device"; modelId: string };
 
 export type LlmMessage = {
   role: "system" | "user" | "assistant";
@@ -27,11 +37,20 @@ type ChatOpts = {
   format?: object;
 };
 
+// ---------- Config resolution ----------
+
 /**
- * Resolve the LLM config for a student. Reads the API key from Keychain.
- * Throws if no key is stored or no model has been selected.
+ * Resolve the LLM config for a student.
+ * For on-device: ensures the model context is loaded before returning.
+ * For OpenRouter: reads the API key from the Keychain.
  */
 export async function resolveLlmConfig(student: Student): Promise<LlmConfig> {
+  if (student.llmProvider === "on-device") {
+    const modelId = student.ondeviceModel ?? "llama-3.2-3b-q4";
+    await loadModel(modelId);
+    return { provider: "on-device", modelId };
+  }
+
   const apiKey = await getApiKey(student.id);
   if (!apiKey) {
     throw new Error(
@@ -52,26 +71,42 @@ export async function resolveLlmConfigById(studentId: string): Promise<LlmConfig
   return resolveLlmConfig(student);
 }
 
+// ---------- Inference helpers ----------
+
 /** Stream a free-form chat response, yielding text chunks. */
 export async function* streamChat(
   cfg: LlmConfig,
   messages: LlmMessage[],
   opts: ChatOpts = {}
 ): AsyncGenerator<string> {
-  yield* openrouterChatStream(cfg.apiKey, cfg.model, messages, opts);
+  if (cfg.provider === "on-device") {
+    yield* onDeviceChatStream(messages, { temperature: opts.temperature });
+  } else {
+    yield* openrouterChatStream(cfg.apiKey, cfg.model, messages, opts);
+  }
 }
 
 /**
  * Stream a structured (JSON-constrained) response, yielding the full JSON
- * as one chunk once the completion finishes.
+ * string as one chunk once the completion finishes.
+ *
+ * Note: on-device models do not support JSON schema enforcement via llama.rn,
+ * so the response is collected as plain text and the caller must parse/validate.
  */
 export async function* streamStructured(
   cfg: LlmConfig,
   messages: LlmMessage[],
   opts: ChatOpts = {}
 ): AsyncGenerator<string> {
-  const result = await openrouterChatOnce(cfg.apiKey, cfg.model, messages, opts);
-  yield result;
+  if (cfg.provider === "on-device") {
+    const result = await onDeviceChatOnce(messages, {
+      temperature: opts.temperature,
+    });
+    yield result;
+  } else {
+    const result = await openrouterChatOnce(cfg.apiKey, cfg.model, messages, opts);
+    yield result;
+  }
 }
 
 /** One-shot (non-streaming) chat completion. */
@@ -80,5 +115,8 @@ export async function chatOnce(
   messages: LlmMessage[],
   opts: ChatOpts = {}
 ): Promise<string> {
+  if (cfg.provider === "on-device") {
+    return onDeviceChatOnce(messages, { temperature: opts.temperature });
+  }
   return openrouterChatOnce(cfg.apiKey, cfg.model, messages, opts);
 }

@@ -1,3 +1,16 @@
+// Stub the data layer so the DB chain (expo-sqlite → expo-asset) is not loaded in unit tests.
+jest.mock("@/lib/data", () => ({
+  getStudent: jest.fn(),
+  addXp: jest.fn(),
+  setStreak: jest.fn(),
+  getMasteryMap: jest.fn().mockReturnValue(new Map()),
+  countMasteredTopics: jest.fn().mockReturnValue(0),
+  countClearedGaps: jest.fn().mockReturnValue(0),
+  listTouchedSubjectIds: jest.fn().mockReturnValue([]),
+  listAchievements: jest.fn().mockReturnValue([]),
+  grantAchievement: jest.fn().mockReturnValue(true),
+}));
+
 import { levelForXp, computeStreak, xpForQuiz, XP_TEACH } from "@/lib/gamify";
 import { ACHIEVEMENTS, type AchievementSnapshot } from "@/lib/gamify-catalog";
 

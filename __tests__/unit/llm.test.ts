@@ -9,6 +9,11 @@ jest.mock("@/lib/openrouter", () => ({
   openrouterChatStream: jest.fn(),
   openrouterChatOnce: jest.fn(),
 }));
+jest.mock("@/lib/ondevice", () => ({
+  loadModel: jest.fn(),
+  onDeviceChatStream: jest.fn(),
+  onDeviceChatOnce: jest.fn(),
+}));
 
 const mockGetApiKey = getApiKey as jest.Mock;
 const mockGetStudent = getStudent as jest.Mock;
@@ -25,6 +30,7 @@ function makeStudent(overrides: Partial<Student> = {}): Student {
     themePref: "system",
     llmProvider: "openrouter",
     openrouterModel: null,
+    ondeviceModel: null,
     xp: 0,
     streakCount: 0,
     streakLastDay: null,
@@ -52,6 +58,7 @@ describe("resolveLlmConfig", () => {
     mockGetApiKey.mockResolvedValueOnce("sk-or-test");
     const cfg = await resolveLlmConfig(makeStudent({ openrouterModel: null }));
     expect(cfg.provider).toBe("openrouter");
+    if (cfg.provider !== "openrouter") throw new Error("wrong provider");
     expect(cfg.apiKey).toBe("sk-or-test");
     expect(cfg.model).toBe("google/gemma-3-27b-it:free");
   });
@@ -61,6 +68,7 @@ describe("resolveLlmConfig", () => {
     const cfg = await resolveLlmConfig(
       makeStudent({ openrouterModel: "anthropic/claude-haiku-4-5" })
     );
+    if (cfg.provider !== "openrouter") throw new Error("wrong provider");
     expect(cfg.model).toBe("anthropic/claude-haiku-4-5");
   });
 
@@ -84,6 +92,7 @@ describe("resolveLlmConfigById", () => {
     mockGetApiKey.mockResolvedValueOnce("sk-or-key");
     const cfg = await resolveLlmConfigById("stu-1");
     expect(cfg.provider).toBe("openrouter");
+    if (cfg.provider !== "openrouter") throw new Error("wrong provider");
     expect(cfg.apiKey).toBe("sk-or-key");
   });
 });
