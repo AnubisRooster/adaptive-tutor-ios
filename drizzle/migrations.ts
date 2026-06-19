@@ -138,7 +138,7 @@ export default {
     ],
   },
   migrations: {
-    "0000_pink_odin": sql0,
-    "0001_ondevice_model": sql1,
+    m0000: sql0,
+    m0001: sql1,
   },
 };

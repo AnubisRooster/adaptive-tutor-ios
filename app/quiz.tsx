@@ -14,7 +14,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter, useLocalSearchParams } from "expo-router";
 import { getActiveStudentId } from "@/lib/session";
 import { getStudent, getSubject, getTopic, getMastery as getMasteryRow } from "@/lib/data";
-import { resolveLlmConfig } from "@/lib/llm";
+import { resolveLlmConfigById } from "@/lib/llm";
 import { generateQuizQuestion } from "@/lib/quiz-gen";
 import { gradeAnswer } from "@/lib/grader";
 import { applyGrade, type ApplyGradeResult } from "@/lib/adaptive";
@@ -51,7 +51,7 @@ export default function QuizScreen() {
       if (!stu || !subjectId || !topicId) { router.back(); return; }
       setStudent(stu);
       try {
-        const cfg = await resolveLlmConfig(stu);
+        const cfg = await resolveLlmConfigById(id);
         const q = await generateQuizQuestion({ studentId: id, subjectId, topicId, cfg });
         setQuestion(q);
         setPhase("answering");
@@ -67,7 +67,7 @@ export default function QuizScreen() {
     if (!student || !question || !answer.trim()) return;
     setPhase("grading");
     try {
-      const cfg = await resolveLlmConfig(student);
+      const cfg = await resolveLlmConfigById(student.id);
       const g = await gradeAnswer({
         studentId: student.id,
         subjectId: subjectId as string,

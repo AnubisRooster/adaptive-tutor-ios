@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useFocusEffect } from "expo-router";
 import {
   View,
   Text,
@@ -24,10 +25,15 @@ import {
   getOrCreateSession,
   addMessage,
   getRecentMessages,
+  updateStudentProvider,
+  updateStudentModel,
+  updateStudentOndeviceModel,
 } from "@/lib/data";
 import { buildTutorTurn } from "@/lib/orchestrator";
-import { resolveLlmConfig, streamChat } from "@/lib/llm";
+import { resolveLlmConfigById, streamChat } from "@/lib/llm";
 import { recommendStartTopic } from "@/lib/adaptive";
+import { fetchModelCatalog, type OpenRouterModel } from "@/lib/openrouter";
+import { ON_DEVICE_MODELS, isModelDownloaded } from "@/lib/ondevice";
 import { awardForTeach } from "@/lib/gamify";
 import ProfileAvatar from "@/components/ProfileAvatar";
 import MasteryBar from "@/components/MasteryBar";
@@ -52,15 +58,27 @@ export default function LearnScreen() {
   const [keyError, setKeyError] = useState<string | null>(null);
   const scrollRef = useRef<ScrollView>(null);
 
+  // Model picker
+  const [modelPickerOpen, setModelPickerOpen] = useState(false);
+  const [currentProvider, setCurrentProvider] = useState<"openrouter" | "on-device">("openrouter");
+  const [currentModelId, setCurrentModelId] = useState<string>("");
+  const [currentModelLabel, setCurrentModelLabel] = useState("Select model");
+  const [orModels, setOrModels] = useState<OpenRouterModel[]>([]);
+  const [loadingOrModels, setLoadingOrModels] = useState(false);
+  const [downloadedOnDevice, setDownloadedOnDevice] = useState<string[]>([]);
+
   // Derived
   const subject = useMemo(
     () => subjects.find((s) => s.id === subjectId) ?? null,
     [subjects, subjectId]
   );
-  const topics = useMemo(
-    () => (subjectId ? listTopics(subjectId) : []),
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [subjectId, subjects]
+  const [topics, setTopics] = useState(() => (subjectId ? listTopics(subjectId) : []));
+
+  // Refresh topics whenever this screen comes into focus (e.g. after adding a topic)
+  useFocusEffect(
+    useCallback(() => {
+      if (subjectId) setTopics(listTopics(subjectId));
+    }, [subjectId])
   );
   const masteryMap = useMemo(
     () => (student ? getMasteryMap(student.id) : new Map()),
@@ -85,12 +103,32 @@ export default function LearnScreen() {
       const stu = getStudent(id);
       if (!stu) { router.replace("/"); return; }
       setStudent(stu);
+      // Initialise model picker label from saved prefs
+      const provider = (stu.llmProvider ?? "openrouter") as "openrouter" | "on-device";
+      setCurrentProvider(provider);
+      if (provider === "on-device") {
+        const mid = stu.ondeviceModel ?? "llama-3.2-3b-q4";
+        setCurrentModelId(mid);
+        setCurrentModelLabel(ON_DEVICE_MODELS.find((m) => m.id === mid)?.name ?? mid);
+      } else {
+        const mid = stu.openrouterModel ?? "";
+        setCurrentModelId(mid);
+        setCurrentModelLabel(mid ? mid.split("/").pop() ?? mid : "OpenRouter");
+      }
+      // Check which on-device models are downloaded
+      const downloaded: string[] = [];
+      for (const m of ON_DEVICE_MODELS) {
+        if (await isModelDownloaded(m.id)) downloaded.push(m.id);
+      }
+      setDownloadedOnDevice(downloaded);
+
       const subs = listSubjects();
       setSubjects(subs);
       if (subs.length === 0) return;
       const first = subs[0];
       setSubjectId(first.id);
       const tList = listTopics(first.id);
+      setTopics(tList);
       if (tList.length > 0) {
         const recommended = recommendStartTopic(id, first.id);
         setTopicId(recommended?.id ?? tList[0].id);
@@ -117,6 +155,7 @@ export default function LearnScreen() {
       setSubjectId(sid);
       setNavOpen(false);
       const tList = listTopics(sid);
+      setTopics(tList);
       if (tList.length > 0) {
         const recommended = recommendStartTopic(student.id, sid);
         setTopicId(recommended?.id ?? tList[0].id);
@@ -153,7 +192,7 @@ export default function LearnScreen() {
     scrollRef.current?.scrollToEnd({ animated: true });
 
     try {
-      const cfg = await resolveLlmConfig(student);
+      const cfg = await resolveLlmConfigById(student.id);
       const { messages: llmMsgs } = await buildTutorTurn({
         studentId: student.id,
         subjectId,
@@ -198,6 +237,35 @@ export default function LearnScreen() {
     streamTutor("teach", text);
   }
 
+  async function openModelPicker() {
+    setModelPickerOpen(true);
+    if (orModels.length === 0) {
+      setLoadingOrModels(true);
+      try {
+        const all = await fetchModelCatalog();
+        setOrModels(all.filter((m) => m.isFree).sort((a, b) => a.name.localeCompare(b.name)));
+      } catch {
+        // leave empty — user can retry
+      } finally {
+        setLoadingOrModels(false);
+      }
+    }
+  }
+
+  function selectModel(provider: "openrouter" | "on-device", modelId: string, label: string) {
+    if (!student) return;
+    setCurrentProvider(provider);
+    setCurrentModelId(modelId);
+    setCurrentModelLabel(label);
+    updateStudentProvider(student.id, provider);
+    if (provider === "on-device") {
+      updateStudentOndeviceModel(student.id, modelId);
+    } else {
+      updateStudentModel(student.id, modelId);
+    }
+    setModelPickerOpen(false);
+  }
+
   async function switchProfile() {
     await clearActiveStudentId();
     router.replace("/");
@@ -237,6 +305,19 @@ export default function LearnScreen() {
           <Text style={styles.keyErrorText}>{keyError} Tap to fix.</Text>
         </TouchableOpacity>
       )}
+
+      {/* Model selector bar */}
+      <View style={styles.modelBar}>
+        <TouchableOpacity style={styles.modelPill} onPress={openModelPicker} testID="model-pill">
+          <Text style={styles.modelPillIcon}>
+            {currentProvider === "on-device" ? "📱" : "☁️"}
+          </Text>
+          <Text style={styles.modelPillLabel} numberOfLines={1}>
+            {currentModelLabel}
+          </Text>
+          <Text style={styles.modelPillChevron}>▾</Text>
+        </TouchableOpacity>
+      </View>
 
       {/* Current topic bar */}
       {topic && (
@@ -330,6 +411,9 @@ export default function LearnScreen() {
             returnKeyType="send"
             onSubmitEditing={onSend}
             blurOnSubmit={false}
+            autoCorrect
+            autoCapitalize="sentences"
+            spellCheck
           />
           <TouchableOpacity
             style={[styles.sendBtn, (!input.trim() || busy) && styles.sendBtnDisabled]}
@@ -340,6 +424,87 @@ export default function LearnScreen() {
           </TouchableOpacity>
         </View>
       </KeyboardAvoidingView>
+
+      {/* Model picker sheet */}
+      <Modal visible={modelPickerOpen} transparent animationType="slide">
+        <TouchableOpacity
+          style={styles.drawerOverlay}
+          activeOpacity={1}
+          onPress={() => setModelPickerOpen(false)}
+        />
+        <View style={styles.pickerSheet}>
+          <View style={styles.pickerHandle} />
+          <View style={styles.drawerHeader}>
+            <Text style={styles.drawerTitle}>Choose a model</Text>
+            <TouchableOpacity onPress={() => setModelPickerOpen(false)}>
+              <Text style={styles.drawerClose}>✕</Text>
+            </TouchableOpacity>
+          </View>
+
+          <ScrollView style={styles.pickerScroll} keyboardShouldPersistTaps="handled">
+
+            {/* On-device section */}
+            {downloadedOnDevice.length > 0 && (
+              <>
+                <Text style={styles.pickerSection}>📱  On-Device</Text>
+                {ON_DEVICE_MODELS.filter((m) => downloadedOnDevice.includes(m.id)).map((m) => {
+                  const active = currentProvider === "on-device" && currentModelId === m.id;
+                  return (
+                    <TouchableOpacity
+                      key={m.id}
+                      style={[styles.pickerRow, active && styles.pickerRowActive]}
+                      onPress={() => selectModel("on-device", m.id, m.name)}
+                    >
+                      <View style={{ flex: 1 }}>
+                        <Text style={[styles.pickerRowName, active && styles.pickerRowNameActive]}>
+                          {m.name}
+                        </Text>
+                        <Text style={styles.pickerRowSub}>{m.description}</Text>
+                      </View>
+                      {active && <Text style={styles.pickerCheck}>✓</Text>}
+                    </TouchableOpacity>
+                  );
+                })}
+              </>
+            )}
+
+            {/* OpenRouter free section */}
+            <Text style={styles.pickerSection}>☁️  OpenRouter — Free</Text>
+            {loadingOrModels && (
+              <View style={styles.pickerLoading}>
+                <ActivityIndicator size="small" color="#6366f1" />
+                <Text style={styles.pickerLoadingText}>Fetching models…</Text>
+              </View>
+            )}
+            {!loadingOrModels && orModels.length === 0 && (
+              <TouchableOpacity style={styles.pickerRetry} onPress={openModelPicker}>
+                <Text style={styles.pickerRetryText}>Could not load models — tap to retry</Text>
+              </TouchableOpacity>
+            )}
+            {orModels.map((m) => {
+              const active = currentProvider === "openrouter" && currentModelId === m.id;
+              const label = m.name || m.id;
+              return (
+                <TouchableOpacity
+                  key={m.id}
+                  style={[styles.pickerRow, active && styles.pickerRowActive]}
+                  onPress={() => selectModel("openrouter", m.id, label)}
+                >
+                  <View style={{ flex: 1 }}>
+                    <Text style={[styles.pickerRowName, active && styles.pickerRowNameActive]}>
+                      {label}
+                    </Text>
+                    <Text style={styles.pickerRowSub}>{m.contextLength.toLocaleString()} ctx</Text>
+                  </View>
+                  {active && <Text style={styles.pickerCheck}>✓</Text>}
+                </TouchableOpacity>
+              );
+            })}
+
+            <View style={{ height: 32 }} />
+          </ScrollView>
+        </View>
+      </Modal>
 
       {/* Topic drawer */}
       <Modal visible={navOpen} transparent animationType="slide">
@@ -631,4 +796,85 @@ const styles = StyleSheet.create({
     borderColor: "#e5e7eb",
   },
   addMaterialText: { fontSize: 14, color: "#6366f1", fontWeight: "500" },
+  // Model bar
+  modelBar: {
+    alignItems: "center",
+    paddingVertical: 6,
+    borderBottomWidth: 1,
+    borderColor: "#e5e7eb",
+    backgroundColor: "#fafafa",
+  },
+  modelPill: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    backgroundColor: "#eef2ff",
+    borderWidth: 1,
+    borderColor: "#c7d2fe",
+    borderRadius: 20,
+    paddingHorizontal: 14,
+    paddingVertical: 6,
+    maxWidth: 280,
+  },
+  modelPillIcon: { fontSize: 13 },
+  modelPillLabel: { flex: 1, fontSize: 13, fontWeight: "600", color: "#4338ca" },
+  modelPillChevron: { fontSize: 11, color: "#6366f1" },
+  // Model picker sheet
+  pickerSheet: {
+    position: "absolute",
+    bottom: 0,
+    left: 0,
+    right: 0,
+    backgroundColor: "#fff",
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    maxHeight: "75%",
+    shadowColor: "#000",
+    shadowOpacity: 0.2,
+    shadowRadius: 16,
+    elevation: 16,
+  },
+  pickerHandle: {
+    width: 36,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: "#d1d5db",
+    alignSelf: "center",
+    marginTop: 10,
+    marginBottom: 4,
+  },
+  pickerScroll: { flex: 1 },
+  pickerSection: {
+    fontSize: 11,
+    fontWeight: "700",
+    color: "#9ca3af",
+    textTransform: "uppercase",
+    letterSpacing: 0.8,
+    paddingHorizontal: 16,
+    paddingTop: 16,
+    paddingBottom: 6,
+  },
+  pickerRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderColor: "#f3f4f6",
+    gap: 10,
+  },
+  pickerRowActive: { backgroundColor: "#eef2ff" },
+  pickerRowName: { fontSize: 14, fontWeight: "500", color: "#111" },
+  pickerRowNameActive: { color: "#4338ca", fontWeight: "700" },
+  pickerRowSub: { fontSize: 12, color: "#9ca3af", marginTop: 2 },
+  pickerCheck: { fontSize: 16, color: "#6366f1" },
+  pickerLoading: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    padding: 16,
+  },
+  pickerLoadingText: { fontSize: 14, color: "#6b7280" },
+  pickerRetry: { padding: 16 },
+  pickerRetryText: { fontSize: 14, color: "#ef4444" },
 });
