@@ -10,13 +10,18 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter, useLocalSearchParams } from "expo-router";
-import { listSubjects, listTopics, listSources, createTopics } from "@/lib/data";
+import { listSubjects, listTopics, listSources, createTopics, createSubject } from "@/lib/data";
 import { getActiveStudentId } from "@/lib/session";
 import { ingestUrl, type IngestProgress } from "@/lib/ingest";
-import { seedTopicContent, type SeedProgress } from "@/lib/topic-seed";
+import {
+  generateCurriculum,
+  seedCourse,
+  type SeedProgress,
+  type LessonPlan,
+} from "@/lib/topic-seed";
 import type { Subject, Topic, Source } from "@/db/schema";
 
-type Tab = "material" | "topic";
+type Tab = "material" | "course";
 
 export default function IngestScreen() {
   const router = useRouter();
@@ -25,7 +30,7 @@ export default function IngestScreen() {
   const [tab, setTab] = useState<Tab>("material");
 
   // ── Shared state ─────────────────────────────────────────────────────────
-  const [subjects] = useState<Subject[]>(() => listSubjects());
+  const [subjects, setSubjects] = useState<Subject[]>(() => listSubjects());
   const [subjectId, setSubjectId] = useState(params.subjectId ?? "");
 
   // ── Add Material tab ──────────────────────────────────────────────────────
@@ -42,19 +47,24 @@ export default function IngestScreen() {
     subjectId ? listTopics(subjectId) : []
   );
 
-  // ── New Topic tab ─────────────────────────────────────────────────────────
-  const [topicName, setTopicName] = useState("");
-  const [topicDesc, setTopicDesc] = useState("");
-  const [topicPhase, setTopicPhase] = useState<"idle" | "seeding" | "done" | "error">("idle");
-  const [topicError, setTopicError] = useState("");
+  // ── New Course tab ────────────────────────────────────────────────────────
+  const [courseName, setCourseName] = useState("");
+  const [courseDesc, setCourseDesc] = useState("");
+  const [coursePhase, setCoursePhase] = useState<"idle" | "planning" | "seeding" | "done" | "error">("idle");
+  const [courseError, setCourseError] = useState("");
   const [seedMsg, setSeedMsg] = useState("");
-  const [createdTopicId, setCreatedTopicId] = useState<string | null>(null);
+  const [curriculum, setCurriculum] = useState<LessonPlan[]>([]);
+  const [firstTopicId, setFirstTopicId] = useState<string | null>(null);
 
   function selectSubject(id: string) {
     setSubjectId(id);
     setTopicId(null);
     setSources(listSources(id));
     setTopics(listTopics(id));
+  }
+
+  function refreshSubjects() {
+    setSubjects(listSubjects());
   }
 
   // ── Material handlers ─────────────────────────────────────────────────────
@@ -89,53 +99,68 @@ export default function IngestScreen() {
     setProgressMsg("");
   }
 
-  // ── Topic handlers ────────────────────────────────────────────────────────
-  async function handleCreateTopic() {
-    if (!topicName.trim() || !subjectId) return;
-    setTopicPhase("seeding");
-    setTopicError("");
-    setSeedMsg("Creating topic…");
+  // ── Course creation handler ───────────────────────────────────────────────
+  async function handleCreateCourse() {
+    if (!courseName.trim() || coursePhase === "planning" || coursePhase === "seeding") return;
+    setCoursePhase("planning");
+    setCourseError("");
+    setSeedMsg("Planning your course curriculum…");
+    setCurriculum([]);
+    setFirstTopicId(null);
+
     try {
-      const id = `topic-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
-      const sub = subjects.find((s) => s.id === subjectId)!;
-      createTopics([{
-        id,
-        subjectId,
-        name: topicName.trim(),
-        description: topicDesc.trim(),
-        orderIndex: topics.length,
-      }]);
-      setCreatedTopicId(id);
-      setTopics(listTopics(subjectId));
-
-      // Auto-generate lesson seed content via LLM
       const studentId = await getActiveStudentId();
-      if (studentId) {
-        await seedTopicContent(
-          { id, name: topicName.trim(), description: topicDesc.trim() },
-          sub,
-          studentId,
-          (p: SeedProgress) => {
-            if (p.phase === "generating") setSeedMsg("Generating lesson content…");
-            else if (p.phase === "saving")
-              setSeedMsg(`Saving content… (${p.saved}/${p.total})`);
-            else if (p.phase === "done") setSeedMsg(`Ready — ${p.chunkCount} lesson chunks created.`);
-            else if (p.phase === "error") setSeedMsg(`Note: content generation failed (${p.message})`);
-          }
-        );
-      }
+      if (!studentId) throw new Error("No active student — please log in first.");
 
-      setTopicName("");
-      setTopicDesc("");
-      setTopicPhase("done");
+      // 1. Generate curriculum outline
+      const lessons = await generateCurriculum(
+        courseName.trim(),
+        courseDesc.trim(),
+        studentId
+      );
+      setCurriculum(lessons);
+      setSeedMsg(`Curriculum planned: ${lessons.length} lessons. Generating Lesson 1…`);
+      setCoursePhase("seeding");
+
+      // 2. Create a new subject for this course
+      const subId = `subject-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
+      const sub = createSubject({
+        id: subId,
+        name: courseName.trim(),
+        description: courseDesc.trim(),
+      });
+      refreshSubjects();
+
+      // 3. Create all lesson topics + seed Lesson 1
+      const topicIds = await seedCourse(
+        sub,
+        lessons,
+        studentId,
+        createTopics,
+        (p: SeedProgress) => {
+          if (p.phase === "generating")
+            setSeedMsg(`Generating Lesson ${p.lesson} of ${p.total}…`);
+          else if (p.phase === "saving")
+            setSeedMsg(`Saving lesson content… (${p.saved}/${p.total} chunks)`);
+          else if (p.phase === "done")
+            setSeedMsg(`Course ready! ${p.lessonCount} lessons created, Lesson 1 content loaded.`);
+          else if (p.phase === "error")
+            setSeedMsg(`Note: content generation issue — ${p.message}`);
+        }
+      );
+
+      setFirstTopicId(topicIds[0] ?? null);
+      setCourseName("");
+      setCourseDesc("");
+      setCoursePhase("done");
     } catch (e) {
-      setTopicError(e instanceof Error ? e.message : "Failed to create topic.");
-      setTopicPhase("error");
+      setCourseError(e instanceof Error ? e.message : "Failed to create course.");
+      setCoursePhase("error");
     }
   }
 
   const canIngest = url.trim().length > 0 && subjectId.length > 0 && phase !== "ingesting";
-  const canCreateTopic = topicName.trim().length > 0 && subjectId.length > 0;
+  const canCreateCourse = courseName.trim().length > 0 && coursePhase !== "planning" && coursePhase !== "seeding";
 
   return (
     <SafeAreaView style={styles.safeArea}>
@@ -158,36 +183,38 @@ export default function IngestScreen() {
           </Text>
         </TouchableOpacity>
         <TouchableOpacity
-          style={[styles.tabBtn, tab === "topic" && styles.tabBtnActive]}
-          onPress={() => setTab("topic")}
-          testID="tab-topic"
+          style={[styles.tabBtn, tab === "course" && styles.tabBtnActive]}
+          onPress={() => setTab("course")}
+          testID="tab-course"
         >
-          <Text style={[styles.tabText, tab === "topic" && styles.tabTextActive]}>
-            New Topic
+          <Text style={[styles.tabText, tab === "course" && styles.tabTextActive]}>
+            New Course
           </Text>
         </TouchableOpacity>
       </View>
 
       <ScrollView contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled">
 
-        {/* Subject selector — shared */}
-        <View style={styles.section}>
-          <Text style={styles.label}>Subject</Text>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.chipRow}>
-            {subjects.map((s) => (
-              <TouchableOpacity
-                key={s.id}
-                style={[styles.chip, s.id === subjectId && styles.chipActive]}
-                onPress={() => selectSubject(s.id)}
-                testID={`subject-${s.id}`}
-              >
-                <Text style={[styles.chipText, s.id === subjectId && styles.chipTextActive]}>
-                  {s.name}
-                </Text>
-              </TouchableOpacity>
-            ))}
-          </ScrollView>
-        </View>
+        {/* Subject selector — only shown for Add Material tab */}
+        {tab === "material" && (
+          <View style={styles.section}>
+            <Text style={styles.label}>Subject</Text>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.chipRow}>
+              {subjects.map((s) => (
+                <TouchableOpacity
+                  key={s.id}
+                  style={[styles.chip, s.id === subjectId && styles.chipActive]}
+                  onPress={() => selectSubject(s.id)}
+                  testID={`subject-${s.id}`}
+                >
+                  <Text style={[styles.chipText, s.id === subjectId && styles.chipTextActive]}>
+                    {s.name}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+          </View>
+        )}
 
         {/* ── ADD MATERIAL TAB ─────────────────────────────────────────────── */}
         {tab === "material" && (
@@ -295,105 +322,115 @@ export default function IngestScreen() {
           </>
         )}
 
-        {/* ── NEW TOPIC TAB ─────────────────────────────────────────────────── */}
-        {tab === "topic" && (
+        {/* ── NEW COURSE TAB ────────────────────────────────────────────────── */}
+        {tab === "course" && (
           <>
+            <View style={styles.hintCard}>
+              <Text style={styles.hintText}>
+                Creates a brand-new standalone course with a progressive 6-lesson curriculum — from absolute basics up to applied mastery. No material upload needed.
+              </Text>
+            </View>
+
             <View style={styles.section}>
-              <Text style={styles.label}>Topic Name</Text>
+              <Text style={styles.label}>Course Name</Text>
               <TextInput
                 style={styles.urlInput}
-                value={topicName}
-                onChangeText={(t) => { setTopicName(t); setTopicPhase("idle"); }}
-                placeholder="e.g. Photosynthesis, The French Revolution…"
+                value={courseName}
+                onChangeText={(t) => { setCourseName(t); if (coursePhase !== "idle") setCoursePhase("idle"); }}
+                placeholder="e.g. Latin, Calculus, Jazz Theory…"
                 autoCapitalize="words"
                 autoCorrect
-                testID="topic-name-input"
+                testID="course-name-input"
               />
             </View>
 
             <View style={styles.section}>
-              <Text style={styles.label}>Description (optional)</Text>
+              <Text style={styles.label}>Focus or Goal (optional)</Text>
               <TextInput
                 style={[styles.urlInput, styles.multilineInput]}
-                value={topicDesc}
-                onChangeText={setTopicDesc}
-                placeholder="What should the tutor cover? Any specific angles or depth?"
+                value={courseDesc}
+                onChangeText={setCourseDesc}
+                placeholder="e.g. Classical Latin for reading original texts. Focus on grammar and translation."
                 autoCapitalize="sentences"
                 autoCorrect
                 multiline
                 numberOfLines={3}
-                testID="topic-desc-input"
+                testID="course-desc-input"
               />
             </View>
 
-            <View style={styles.hintCard}>
-              <Text style={styles.hintText}>
-                After creating a topic, the tutor will generate lesson content and quizzes for it on demand — no material ingestion required.
-              </Text>
-            </View>
-
-            {(topicPhase === "idle" || topicPhase === "error") && (
+            {(coursePhase === "idle" || coursePhase === "error") && (
               <TouchableOpacity
-                style={[styles.actionBtn, !canCreateTopic && styles.actionBtnDisabled]}
-                disabled={!canCreateTopic}
-                onPress={handleCreateTopic}
-                testID="create-topic-btn"
+                style={[styles.actionBtn, !canCreateCourse && styles.actionBtnDisabled]}
+                disabled={!canCreateCourse}
+                onPress={handleCreateCourse}
+                testID="create-course-btn"
               >
-                <Text style={styles.actionBtnText}>Create Topic + Generate Content</Text>
+                <Text style={styles.actionBtnText}>Create Course</Text>
               </TouchableOpacity>
             )}
 
-            {topicPhase === "seeding" && (
-              <View style={styles.progressCard} testID="topic-seeding">
+            {(coursePhase === "planning" || coursePhase === "seeding") && (
+              <View style={styles.progressCard} testID="course-building">
                 <ActivityIndicator size="small" color="#6366f1" />
                 <Text style={styles.progressText}>{seedMsg}</Text>
               </View>
             )}
 
-            {topicPhase === "done" && (
-              <View style={styles.doneCard} testID="topic-done">
-                <Text style={styles.doneTitle}>✓ Topic ready</Text>
+            {/* Show planned lessons while seeding */}
+            {curriculum.length > 0 && coursePhase !== "done" && (
+              <View style={styles.section}>
+                <Text style={styles.sectionTitle}>Lesson Plan</Text>
+                {curriculum.map((l, i) => (
+                  <View key={i} style={[styles.topicRow, i === 0 && { borderLeftWidth: 3, borderLeftColor: "#6366f1", paddingLeft: 10 }]}>
+                    <Text style={[styles.topicName, i === 0 && { color: "#6366f1" }]}>{l.name}{i === 0 ? " — generating…" : ""}</Text>
+                    <Text style={styles.topicDesc}>{l.description}</Text>
+                  </View>
+                ))}
+              </View>
+            )}
+
+            {coursePhase === "done" && (
+              <View style={styles.doneCard} testID="course-done">
+                <Text style={styles.doneTitle}>Course ready!</Text>
                 <Text style={styles.doneDesc}>{seedMsg}</Text>
+
+                {curriculum.length > 0 && (
+                  <View style={{ marginTop: 8, gap: 6 }}>
+                    {curriculum.map((l, i) => (
+                      <View key={i} style={styles.lessonPlanRow}>
+                        <Text style={[styles.lessonPlanNum, i === 0 && { color: "#6366f1" }]}>{i + 1}</Text>
+                        <View style={{ flex: 1 }}>
+                          <Text style={[styles.topicName, { fontSize: 13 }]}>{l.name}</Text>
+                          <Text style={styles.topicDesc} numberOfLines={1}>{l.description}</Text>
+                        </View>
+                        {i === 0 && <Text style={styles.lessonReady}>Ready</Text>}
+                      </View>
+                    ))}
+                  </View>
+                )}
+
                 <TouchableOpacity
-                  style={[styles.addMoreBtn, { backgroundColor: "#6366f1", borderColor: "#6366f1" }]}
-                  onPress={() => {
-                    router.replace({
-                      pathname: "/learn",
-                      params: { highlightTopicId: createdTopicId ?? undefined },
-                    });
-                  }}
-                  testID="go-to-topic-btn"
+                  style={[styles.addMoreBtn, { backgroundColor: "#6366f1", borderColor: "#6366f1", marginTop: 12 }]}
+                  onPress={() => router.replace("/learn")}
+                  testID="go-to-course-btn"
                 >
-                  <Text style={[styles.addMoreText, { color: "#fff" }]}>Go to topic →</Text>
+                  <Text style={[styles.addMoreText, { color: "#fff" }]}>Start learning →</Text>
                 </TouchableOpacity>
                 <TouchableOpacity
                   style={styles.addMoreBtn}
-                  onPress={() => { setTopicPhase("idle"); setCreatedTopicId(null); setSeedMsg(""); }}
-                  testID="add-another-topic-btn"
+                  onPress={() => { setCoursePhase("idle"); setCurriculum([]); setSeedMsg(""); setFirstTopicId(null); }}
+                  testID="add-another-course-btn"
                 >
-                  <Text style={styles.addMoreText}>Add another topic</Text>
+                  <Text style={styles.addMoreText}>Create another course</Text>
                 </TouchableOpacity>
               </View>
             )}
 
-            {topicPhase === "error" && (
-              <View style={styles.errorCard} testID="topic-error">
-                <Text style={styles.errorTitle}>Failed to create topic</Text>
-                <Text style={styles.errorDesc}>{topicError}</Text>
-              </View>
-            )}
-
-            {topics.length > 0 && (
-              <View style={styles.section}>
-                <Text style={styles.sectionTitle}>Existing Topics</Text>
-                {topics.map((t) => (
-                  <View key={t.id} style={styles.topicRow}>
-                    <Text style={styles.topicName}>{t.name}</Text>
-                    {!!t.description && (
-                      <Text style={styles.topicDesc} numberOfLines={2}>{t.description}</Text>
-                    )}
-                  </View>
-                ))}
+            {coursePhase === "error" && (
+              <View style={styles.errorCard} testID="course-error">
+                <Text style={styles.errorTitle}>Failed to create course</Text>
+                <Text style={styles.errorDesc}>{courseError}</Text>
               </View>
             )}
           </>
@@ -531,4 +568,33 @@ const styles = StyleSheet.create({
   },
   topicName: { fontSize: 14, fontWeight: "600", color: "#111" },
   topicDesc: { fontSize: 13, color: "#6b7280", lineHeight: 18 },
+  lessonPlanRow: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: 10,
+    paddingVertical: 8,
+    borderBottomWidth: 1,
+    borderColor: "#f3f4f6",
+  },
+  lessonPlanNum: {
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    backgroundColor: "#e5e7eb",
+    textAlign: "center",
+    fontSize: 12,
+    fontWeight: "700",
+    color: "#6b7280",
+    lineHeight: 22,
+  },
+  lessonReady: {
+    fontSize: 11,
+    fontWeight: "600",
+    color: "#16a34a",
+    backgroundColor: "#dcfce7",
+    borderRadius: 6,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    alignSelf: "flex-start",
+  },
 });

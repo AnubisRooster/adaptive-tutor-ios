@@ -1,85 +1,202 @@
 /**
- * Auto-generate and store lesson seed content for a newly created topic.
+ * Auto-generate courses and lesson content for newly created subjects/topics.
  *
- * Calls the active student's LLM to produce a structured overview, then
- * splits it into paragraph-level knowledge chunks stored in SQLite so the
- * RAG layer can retrieve them during tutoring and quiz sessions.
+ * generateCurriculum  — asks the LLM to plan a progressive lesson sequence
+ * seedTopicContent    — generates and stores knowledge chunks for one lesson
  */
 
 import { chatOnce, resolveLlmConfigById } from "@/lib/llm";
 import { insertKnowledgeChunk } from "@/lib/data";
 
+// ---------- Types ----------
+
 export type SeedProgress =
-  | { phase: "generating" }
+  | { phase: "planning" }
+  | { phase: "generating"; lesson: number; total: number }
   | { phase: "saving"; saved: number; total: number }
-  | { phase: "done"; chunkCount: number }
+  | { phase: "done"; lessonCount: number; chunkCount: number }
   | { phase: "error"; message: string };
 
+export type LessonPlan = {
+  name: string;
+  description: string;
+};
+
+// ---------- Curriculum planner ----------
+
+/**
+ * Ask the LLM for a progressive lesson sequence for a new course.
+ * Returns an ordered array of { name, description } lesson plans.
+ */
+export async function generateCurriculum(
+  courseName: string,
+  courseDescription: string,
+  studentId: string
+): Promise<LessonPlan[]> {
+  const cfg = await resolveLlmConfigById(studentId);
+
+  const descLine = courseDescription.trim()
+    ? `\nCourse description: ${courseDescription.trim()}`
+    : "";
+
+  const prompt = `You are an expert curriculum designer creating a structured course plan.
+
+Course title: "${courseName}"${descLine}
+
+Design a progressive sequence of exactly 6 lessons for a beginner starting from zero knowledge. Each lesson should build directly on the previous one — like a real classroom course.
+
+Return ONLY a JSON array with exactly 6 objects. Each object must have:
+- "name": short lesson title (e.g. "Lesson 1: Introduction & Alphabet")  
+- "description": one sentence describing what the student will learn
+
+Example format:
+[
+  {"name": "Lesson 1: Introduction & Core Concepts", "description": "Discover what ${courseName} is and why it matters, with a first look at key terminology."},
+  {"name": "Lesson 2: Foundations", "description": "Build the foundational knowledge needed before going deeper."},
+  ...
+]
+
+Return only the JSON array, no other text.`;
+
+  const raw = await chatOnce(cfg, [{ role: "user", content: prompt }], {
+    temperature: 0.3,
+    maxTokens: 800,
+  });
+
+  // Extract JSON array from response
+  const match = raw.match(/\[[\s\S]*\]/);
+  if (!match) throw new Error("Could not parse curriculum from LLM response.");
+
+  const parsed: unknown = JSON.parse(match[0]);
+  if (!Array.isArray(parsed)) throw new Error("Curriculum response was not an array.");
+
+  return parsed
+    .filter((item): item is LessonPlan =>
+      typeof item === "object" &&
+      item !== null &&
+      typeof (item as LessonPlan).name === "string" &&
+      typeof (item as LessonPlan).description === "string"
+    )
+    .slice(0, 8); // cap at 8 lessons
+}
+
+// ---------- Lesson content seeder ----------
+
+/**
+ * Generate and store knowledge chunks for a single lesson topic.
+ * The content is structured to teach progressively, matching the lesson's
+ * position in the overall course sequence.
+ */
 export async function seedTopicContent(
   topic: { id: string; name: string; description?: string | null },
   subject: { id: string; name: string },
   studentId: string,
-  onProgress?: (p: SeedProgress) => void
+  onProgress?: (p: SeedProgress) => void,
+  lessonIndex = 0,
+  totalLessons = 1
 ): Promise<number> {
-  onProgress?.({ phase: "generating" });
+  onProgress?.({ phase: "generating", lesson: lessonIndex + 1, total: totalLessons });
 
   const cfg = await resolveLlmConfigById(studentId);
 
-  const descLine = topic.description?.trim()
-    ? `\nTopic description: ${topic.description.trim()}`
-    : "";
+  const isFirst = lessonIndex === 0;
+  const progressionNote = isFirst
+    ? "This is the very first lesson — assume the student knows absolutely nothing. Be welcoming, clear, and accessible."
+    : `This is lesson ${lessonIndex + 1} of ${totalLessons}. Build on what was covered in earlier lessons. Introduce new depth and complexity appropriate for this stage.`;
 
-  const prompt = `You are an expert educator creating lesson material for a course on "${subject.name}".
+  const prompt = `You are an expert educator teaching a course on "${subject.name}".
 
-Generate a comprehensive lesson overview for the topic: "${topic.name}"${descLine}
+Lesson: "${topic.name}"
+${topic.description ? `Lesson summary: ${topic.description}` : ""}
 
-Structure your response using these exact section headings (use ## for each):
+${progressionNote}
 
-## Introduction
-A clear 2–3 sentence introduction explaining what this topic is and why it matters.
+Write a complete lesson covering the following sections (use ## headings):
 
-## Core Concepts
-Explain 4–6 key ideas, principles, or terms the student must understand. Use bullet points for each concept.
+## What You'll Learn
+1–2 sentences stating the specific skills or knowledge the student will gain.
 
-## Examples
-Provide 2–3 concrete, easy-to-follow examples that illustrate the core concepts.
+## Explanation
+A clear, thorough explanation of the core content. Use plain language. Include examples inline.
 
-## Common Misconceptions
-List 2–3 things students often get wrong about this topic and clarify them.
+## Key Points
+3–5 bullet points summarising the most important takeaways.
 
-## Summary
-A brief 2–3 sentence recap of the most important takeaways.
+## Practice
+One hands-on exercise or reflection question the student can try right now.
 
-Write clearly and pedagogically. Avoid LaTeX; use plain language and Unicode symbols where needed.`;
+Write pedagogically and engagingly. Avoid LaTeX notation.`;
 
   const raw = await chatOnce(cfg, [{ role: "user", content: prompt }], {
     temperature: 0.4,
-    maxTokens: 1200,
+    maxTokens: 1000,
   });
 
-  // Split into chunks by section (## heading) or paragraph
   const chunks = splitIntoChunks(raw);
 
   onProgress?.({ phase: "saving", saved: 0, total: chunks.length });
 
-  for (let i = 0; i < chunks.length; i++) {
-    const text = chunks[i].trim();
-    if (text.length < 20) continue; // skip empty/tiny fragments
+  let saved = 0;
+  for (const text of chunks) {
+    const trimmed = text.trim();
+    if (trimmed.length < 20) continue;
     insertKnowledgeChunk({
       subjectId: subject.id,
       topicId: topic.id,
       source: "generated",
-      text,
+      text: trimmed,
     });
-    onProgress?.({ phase: "saving", saved: i + 1, total: chunks.length });
+    saved++;
+    onProgress?.({ phase: "saving", saved, total: chunks.length });
   }
 
-  onProgress?.({ phase: "done", chunkCount: chunks.length });
-  return chunks.length;
+  return saved;
 }
 
+// ---------- Full course seeder ----------
+
+/**
+ * Create all lesson topics for a new subject and seed content for Lesson 1.
+ * Returns the array of created lesson IDs in order.
+ */
+export async function seedCourse(
+  subject: { id: string; name: string },
+  lessons: LessonPlan[],
+  studentId: string,
+  createTopicsFn: (rows: {
+    id: string; subjectId: string; name: string;
+    description?: string; orderIndex: number;
+  }[]) => void,
+  onProgress?: (p: SeedProgress) => void
+): Promise<string[]> {
+  // Create all lesson topics in DB first
+  const topicRows = lessons.map((l, i) => ({
+    id: `topic-${Date.now()}-${i}-${Math.random().toString(36).slice(2, 5)}`,
+    subjectId: subject.id,
+    name: l.name,
+    description: l.description,
+    orderIndex: i,
+  }));
+  createTopicsFn(topicRows);
+
+  // Seed content for Lesson 1 only (others generate on demand)
+  const first = topicRows[0];
+  const chunkCount = await seedTopicContent(
+    { id: first.id, name: first.name, description: first.description },
+    subject,
+    studentId,
+    onProgress,
+    0,
+    lessons.length
+  );
+
+  onProgress?.({ phase: "done", lessonCount: lessons.length, chunkCount });
+  return topicRows.map((t) => t.id);
+}
+
+// ---------- Helpers ----------
+
 function splitIntoChunks(text: string): string[] {
-  // Split on section headings first
   const sections = text.split(/\n(?=##\s)/);
   const chunks: string[] = [];
 
@@ -87,11 +204,9 @@ function splitIntoChunks(text: string): string[] {
     const trimmed = section.trim();
     if (!trimmed) continue;
 
-    // If a section is short enough, keep it whole
     if (trimmed.length <= 800) {
       chunks.push(trimmed);
     } else {
-      // Further split long sections by double newline (paragraph breaks)
       const paragraphs = trimmed.split(/\n\n+/).filter((p) => p.trim().length > 0);
       chunks.push(...paragraphs);
     }
