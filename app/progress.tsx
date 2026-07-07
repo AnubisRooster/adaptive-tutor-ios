@@ -102,6 +102,18 @@ export default function ProgressScreen() {
           </View>
         </View>
 
+        {/* Knowledge map */}
+        {topics.length > 0 && (
+          <TouchableOpacity
+            style={styles.graphLinkCard}
+            onPress={() => router.push("/graph")}
+            testID="knowledge-map-link"
+          >
+            <Text style={styles.graphLinkTitle}>🕸️ Knowledge Map</Text>
+            <Text style={styles.graphLinkDesc}>See how your topics connect and where you&apos;re strong</Text>
+          </TouchableOpacity>
+        )}
+
         {/* Topics mastery */}
         {subjects.map((sub) => {
           const subTopics = topics.filter((t) => t.subjectId === sub.id);
@@ -199,6 +211,14 @@ const styles = StyleSheet.create({
   xpNext: { fontSize: 12, color: "#9ca3af" },
   xpBarBg: { height: 8, backgroundColor: "#e5e7eb", borderRadius: 4, overflow: "hidden" },
   xpBarFill: { height: 8, backgroundColor: "#6366f1", borderRadius: 4 },
+  graphLinkCard: {
+    backgroundColor: "#eef2ff",
+    borderRadius: 14,
+    padding: 14,
+    gap: 2,
+  },
+  graphLinkTitle: { fontSize: 15, fontWeight: "700", color: "#111" },
+  graphLinkDesc: { fontSize: 12, color: "#6b7280" },
   subjectSection: { gap: 10 },
   subjectName: { fontSize: 15, fontWeight: "700", color: "#111" },
   topicRow: {
