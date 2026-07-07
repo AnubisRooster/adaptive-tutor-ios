@@ -34,6 +34,7 @@
           "faceIDPermission": "Adaptive Tutor uses Face ID to keep your learning profiles and API key private."
         }
       ],
+      "./plugins/withoutPushEntitlement",
       "expo-notifications"
     ]
   }
