@@ -36,7 +36,8 @@
       ],
       "./plugins/withoutPushEntitlement",
       "expo-notifications",
-      "./plugins/withoutScriptSandboxing"
+      "./plugins/withoutScriptSandboxing",
+      "./plugins/withReleaseRunScheme"
     ]
   }
 }
