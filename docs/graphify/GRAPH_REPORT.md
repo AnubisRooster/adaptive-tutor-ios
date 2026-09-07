@@ -1,7 +1,7 @@
-# Graph Report - adaptive-tutor-ios  (2026-09-06)
+# Graph Report - adaptive-tutor-ios  (2026-09-07)
 
 ## Corpus Check
-- 104 files · ~75,557 words
+- 105 files · ~164,787 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
