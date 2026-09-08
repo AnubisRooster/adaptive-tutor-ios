@@ -23,6 +23,7 @@ jest.mock("@/lib/data", () => ({
   getSubject: jest.fn().mockReturnValue({ id: "philosophy", name: "Philosophy" }),
   getTopic: jest.fn().mockReturnValue({ id: "t1", name: "Epistemology", description: "Study of knowledge." }),
   getMastery: jest.fn().mockReturnValue({ mastery: 0.4, bloomLevel: 2, attempts: 3, correct: 2 }),
+  getTopicSubtopics: jest.fn().mockReturnValue([]),
 }));
 jest.mock("@/lib/llm", () => ({
   resolveLlmConfigById: jest.fn().mockResolvedValue({ provider: "openrouter", model: "test", apiKey: "sk-test" }),
@@ -140,13 +141,31 @@ describe("QuizScreen", () => {
     await findByText(/Level up/);
   });
 
-  it("continue button calls router.back", async () => {
-    const { findByTestId } = await render(<QuizScreen />);
+  it("next question button advances to the next question", async () => {
+    const { findByTestId, findByText } = await render(<QuizScreen />);
     const input = await findByTestId("answer-input");
     await fireEvent.changeText(input, "Answer text here.");
     await fireEvent.press(await findByTestId("submit-btn"));
-    const continueBtn = await findByTestId("continue-btn");
-    await fireEvent.press(continueBtn);
+    await findByTestId("phase-result");
+    await fireEvent.press(await findByTestId("next-question-btn"));
+    await findByTestId("answer-input");
+    await findByText(/Question 2 of 5/);
+  });
+
+  it("completes a session and shows the summary, then continues back", async () => {
+    const { findByTestId, findByText } = await render(<QuizScreen />);
+    for (let i = 0; i < 5; i++) {
+      const input = await findByTestId("answer-input");
+      await fireEvent.changeText(input, `Answer ${i}.`);
+      await fireEvent.press(await findByTestId("submit-btn"));
+      if (i < 4) {
+        await findByTestId("phase-result");
+        await fireEvent.press(await findByTestId("next-question-btn"));
+      }
+    }
+    await findByTestId("phase-summary");
+    await findByText(/5\/5 correct/);
+    await fireEvent.press(await findByTestId("continue-btn"));
     expect(mockRouter.back).toHaveBeenCalled();
   });
 

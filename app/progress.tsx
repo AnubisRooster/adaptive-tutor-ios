@@ -23,6 +23,13 @@ import type { Student, Mastery, Subject, Topic } from "@/db/schema";
 
 const BLOOM_NAMES = ["Remember", "Understand", "Apply", "Analyze", "Evaluate", "Create"];
 
+const PHASE_LABELS: Record<string, string> = {
+  learn: "Learning",
+  quiz: "Quiz time",
+  mastery: "Mastering",
+  complete: "Complete",
+};
+
 type Summary = ReturnType<typeof gamifySummary>;
 
 export default function ProgressScreen() {
@@ -130,6 +137,11 @@ export default function ProgressScreen() {
                     <View style={styles.topicRowLeft}>
                       <Text style={styles.topicName}>{t.name}</Text>
                       <Text style={styles.bloomLabel}>{BLOOM_NAMES[bloom - 1]}</Text>
+                      {m?.phase && (
+                        <Text style={styles.phaseLabel}>
+                          {PHASE_LABELS[m.phase as keyof typeof PHASE_LABELS] ?? m.phase}
+                        </Text>
+                      )}
                     </View>
                     <View style={styles.topicRowRight}>
                       <MasteryBar value={mastery} />
@@ -232,6 +244,7 @@ const styles = StyleSheet.create({
   topicRowLeft: { flex: 1, gap: 2 },
   topicName: { fontSize: 14, color: "#111" },
   bloomLabel: { fontSize: 11, color: "#9ca3af" },
+  phaseLabel: { fontSize: 11, color: "#7c3aed", fontWeight: "500" },
   topicRowRight: { flexDirection: "row", alignItems: "center", gap: 8, width: 110 },
   masteryPct: { fontSize: 12, color: "#6b7280", width: 34, textAlign: "right" },
   badgesSection: { gap: 12 },

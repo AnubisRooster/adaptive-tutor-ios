@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   View,
   Text,
@@ -13,8 +13,8 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter, useLocalSearchParams } from "expo-router";
 import { getActiveStudentId } from "@/lib/session";
-import { getStudent, getSubject, getTopic, getMastery as getMasteryRow } from "@/lib/data";
-import { resolveLlmConfigById } from "@/lib/llm";
+import { getStudent, getSubject, getTopic, getMastery as getMasteryRow, getTopicSubtopics } from "@/lib/data";
+import { resolveLlmConfigById, type LlmConfig } from "@/lib/llm";
 import { generateQuizQuestion } from "@/lib/quiz-gen";
 import { gradeAnswer } from "@/lib/grader";
 import { applyGrade, type ApplyGradeResult } from "@/lib/adaptive";
@@ -22,10 +22,20 @@ import { awardForGrade, type GamifyResult } from "@/lib/gamify";
 import type { Grade, QuizQuestion } from "@/lib/schemas";
 import type { Student } from "@/db/schema";
 
-type Phase = "init" | "answering" | "grading" | "result" | "error";
+type Phase = "init" | "answering" | "grading" | "result" | "summary" | "error";
+
+/** Questions per quiz session. */
+const ROUNDS = 5;
 
 const SCORE_COLOR = (score: number) =>
   score >= 0.8 ? "#10b981" : score >= 0.5 ? "#f59e0b" : "#ef4444";
+
+type SessionResult = {
+  question: QuizQuestion;
+  grade: Grade;
+  applyResult: ApplyGradeResult;
+  gamifyResult: GamifyResult;
+};
 
 export default function QuizScreen() {
   const router = useRouter();
@@ -35,13 +45,44 @@ export default function QuizScreen() {
   }>();
 
   const [student, setStudent] = useState<Student | null>(null);
+  const [cfg, setCfg] = useState<LlmConfig | null>(null);
+  const [subtopics, setSubtopics] = useState<{ name: string; description: string }[]>([]);
   const [question, setQuestion] = useState<QuizQuestion | null>(null);
   const [answer, setAnswer] = useState("");
   const [phase, setPhase] = useState<Phase>("init");
+  const [round, setRound] = useState(0);
+  const [results, setResults] = useState<SessionResult[]>([]);
   const [grade, setGrade] = useState<Grade | null>(null);
   const [applyResult, setApplyResult] = useState<ApplyGradeResult | null>(null);
   const [gamifyResult, setGamifyResult] = useState<GamifyResult | null>(null);
   const [error, setError] = useState<string | null>(null);
+
+  async function startSession(id: string) {
+    setPhase("init");
+    setError(null);
+    setResults([]);
+    setRound(0);
+    try {
+      const c = await resolveLlmConfigById(id);
+      setCfg(c);
+      const t = getTopic(topicId as string);
+      const subs = t ? getTopicSubtopics(t) : [];
+      setSubtopics(subs);
+      const focus = subs.length > 0 ? subs[0] : undefined;
+      const q = await generateQuizQuestion({
+        studentId: id,
+        subjectId: subjectId as string,
+        topicId: topicId as string,
+        cfg: c,
+        focus,
+      });
+      setQuestion(q);
+      setPhase("answering");
+    } catch (e) {
+      setError(String(e));
+      setPhase("error");
+    }
+  }
 
   useEffect(() => {
     (async () => {
@@ -50,24 +91,16 @@ export default function QuizScreen() {
       const stu = getStudent(id);
       if (!stu || !subjectId || !topicId) { router.back(); return; }
       setStudent(stu);
-      try {
-        const cfg = await resolveLlmConfigById(id);
-        const q = await generateQuizQuestion({ studentId: id, subjectId, topicId, cfg });
-        setQuestion(q);
-        setPhase("answering");
-      } catch (e) {
-        setError(String(e));
-        setPhase("error");
-      }
+      await startSession(id);
     })();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   async function submitAnswer() {
-    if (!student || !question || !answer.trim()) return;
+    if (!student || !question || !answer.trim() || !cfg) return;
     setPhase("grading");
     try {
-      const cfg = await resolveLlmConfigById(student.id);
+      const focus = subtopics.length > 0 ? subtopics[round % subtopics.length] : undefined;
       const g = await gradeAnswer({
         studentId: student.id,
         subjectId: subjectId as string,
@@ -79,7 +112,7 @@ export default function QuizScreen() {
       setGrade(g);
       // Capture mastery before applying the grade so we can detect a threshold crossing.
       const masteryBefore = getMasteryRow(student.id, topicId as string)?.mastery ?? 0;
-      const ar = applyGrade(student.id, topicId as string, g);
+      const ar = applyGrade(student.id, topicId as string, g, focus?.name);
       setApplyResult(ar);
       const gr = awardForGrade(student.id, {
         grade: g,
@@ -88,12 +121,49 @@ export default function QuizScreen() {
         gapCleared: masteryBefore < 0.8 && ar.mastery.mastery >= 0.8,
       });
       setGamifyResult(gr);
-      setPhase("result");
+      setResults((prev) => [...prev, { question, grade: g, applyResult: ar, gamifyResult: gr }]);
+      if (round >= ROUNDS - 1) {
+        setPhase("summary");
+      } else {
+        setPhase("result");
+      }
     } catch (e) {
       setError(String(e));
       setPhase("answering");
     }
   }
+
+  async function nextQuestion() {
+    if (!student || !cfg) return;
+    const next = round + 1;
+    setRound(next);
+    setAnswer("");
+    setError(null);
+    setPhase("answering");
+    try {
+      const focus = subtopics.length > 0 ? subtopics[next % subtopics.length] : undefined;
+      const q = await generateQuizQuestion({
+        studentId: student.id,
+        subjectId: subjectId as string,
+        topicId: topicId as string,
+        cfg,
+        focus,
+      });
+      setQuestion(q);
+    } catch (e) {
+      setError(String(e));
+      setPhase("error");
+    }
+  }
+
+  const summary = useMemo(() => {
+    if (results.length === 0) return null;
+    const totalXp = results.reduce((s, r) => s + (r.gamifyResult.xpGained ?? 0), 0);
+    const avgScore = results.reduce((s, r) => s + r.grade.score, 0) / results.length;
+    const correct = results.filter((r) => r.grade.correct).length;
+    const next = results[results.length - 1].applyResult.next;
+    return { totalXp, avgScore, correct, next };
+  }, [results]);
 
   const topicName = topicId ? (getTopic(topicId as string)?.name ?? "Topic") : "Topic";
   const subjectName = subjectId ? (getSubject(subjectId as string)?.name ?? "") : "";
@@ -125,6 +195,15 @@ export default function QuizScreen() {
             <View style={styles.masteryChip}>
               <Text style={styles.masteryChipText}>
                 Mastery: {Math.round((currentMastery.mastery ?? 0) * 100)}%
+              </Text>
+            </View>
+          )}
+
+          {/* Question progress */}
+          {(phase === "answering" || phase === "grading" || phase === "result") && (
+            <View style={styles.roundPill}>
+              <Text style={styles.roundPillText}>
+                Question {round + 1} of {ROUNDS}
               </Text>
             </View>
           )}
@@ -193,7 +272,7 @@ export default function QuizScreen() {
             </>
           )}
 
-          {/* Result */}
+          {/* Per-question result */}
           {phase === "result" && grade && applyResult && gamifyResult && (
             <View testID="phase-result">
               {/* Score card */}
@@ -236,11 +315,44 @@ export default function QuizScreen() {
                 </View>
               )}
 
+              <TouchableOpacity
+                style={styles.primaryBtn}
+                onPress={nextQuestion}
+                testID="next-question-btn"
+              >
+                <Text style={styles.primaryBtnText}>
+                  {round >= ROUNDS - 1 ? "See results" : "Next question"}
+                </Text>
+              </TouchableOpacity>
+            </View>
+          )}
+
+          {/* Session summary */}
+          {phase === "summary" && summary && applyResult && gamifyResult && (
+            <View testID="phase-summary">
+              <View style={styles.summaryCard}>
+                <Text style={styles.summaryTitle}>Session complete</Text>
+                <View style={styles.row}>
+                  <Text style={[styles.summaryScore, { color: SCORE_COLOR(summary.avgScore) }]}>
+                    {Math.round(summary.avgScore * 100)}%
+                  </Text>
+                  <Text style={styles.summaryMeta}>
+                    avg · {summary.correct}/{results.length} correct
+                  </Text>
+                </View>
+                <Text style={styles.summaryXp}>+{summary.totalXp} XP earned this session</Text>
+                {gamifyResult.leveledUpLevel && (
+                  <Text style={styles.levelUpText}>
+                    Level up! You are now Level {gamifyResult.newLevel.level} — {gamifyResult.newLevel.title}
+                  </Text>
+                )}
+              </View>
+
               {/* Next step */}
               <View style={styles.nextBox}>
                 <Text style={styles.nextLabel}>Next up</Text>
-                <Text style={styles.nextTopic}>{applyResult.next.topicName}</Text>
-                <Text style={styles.nextNote}>{applyResult.next.note}</Text>
+                <Text style={styles.nextTopic}>{summary.next.topicName}</Text>
+                <Text style={styles.nextNote}>{summary.next.note}</Text>
               </View>
 
               <TouchableOpacity
@@ -287,6 +399,28 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   masteryChipText: { fontSize: 12, color: "#7c3aed", fontWeight: "500" },
+  roundPill: {
+    alignSelf: "flex-start",
+    backgroundColor: "#eef2ff",
+    borderRadius: 999,
+    paddingHorizontal: 12,
+    paddingVertical: 4,
+    marginBottom: 16,
+  },
+  roundPillText: { fontSize: 12, color: "#6366f1", fontWeight: "600" },
+  summaryCard: {
+    backgroundColor: "#f9fafb",
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: "#e5e7eb",
+    padding: 18,
+    marginBottom: 16,
+    gap: 8,
+  },
+  summaryTitle: { fontSize: 18, fontWeight: "700", color: "#111" },
+  summaryScore: { fontSize: 34, fontWeight: "800" },
+  summaryMeta: { fontSize: 13, color: "#6b7280", marginLeft: 8 },
+  summaryXp: { fontSize: 15, fontWeight: "600", color: "#6366f1" },
   questionCard: {
     backgroundColor: "#f9fafb",
     borderRadius: 14,

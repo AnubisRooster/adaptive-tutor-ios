@@ -20,6 +20,11 @@ import {
   listSubjects,
   listTopics,
   getMasteryMap,
+  getMastery,
+  getTopic,
+  getTopicSubtopics,
+  markSubtopicTaught,
+  parseProgress,
   listOpenGaps,
   getOrCreateSession,
   addMessage,
@@ -34,6 +39,8 @@ import { recommendStartTopic } from "@/lib/adaptive";
 import { fetchModelCatalog, type OpenRouterModel } from "@/lib/openrouter";
 import { ON_DEVICE_MODELS, isModelDownloaded } from "@/lib/ondevice";
 import { awardForTeach } from "@/lib/gamify";
+import { ensureSubtopicsCached } from "@/lib/subtopics-gen";
+import { findNextToTeach } from "@/lib/subtopic-nav";
 import ProfileAvatar from "@/components/ProfileAvatar";
 import MasteryBar from "@/components/MasteryBar";
 import MarkdownText from "@/components/MarkdownText";
@@ -43,6 +50,13 @@ import type { TutorMode } from "@/lib/prompts";
 type ChatMsg = { role: "user" | "assistant"; content: string };
 
 const BLOOM_NAMES = ["Remember", "Understand", "Apply", "Analyze", "Evaluate", "Create"];
+
+const PHASE_LABELS: Record<string, string> = {
+  learn: "Learning",
+  quiz: "Quiz time",
+  mastery: "Mastering",
+  complete: "Complete",
+};
 
 export default function LearnScreen() {
   const router = useRouter();
@@ -65,6 +79,7 @@ export default function LearnScreen() {
   const [orModels, setOrModels] = useState<OpenRouterModel[]>([]);
   const [loadingOrModels, setLoadingOrModels] = useState(false);
   const [downloadedOnDevice, setDownloadedOnDevice] = useState<string[]>([]);
+  const [subtopics, setSubtopics] = useState<{ name: string; description: string }[]>([]);
 
   // Derived
   const subject = useMemo(
@@ -93,6 +108,18 @@ export default function LearnScreen() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [student, topicId, messages.length]
   );
+  const masteryRow = student && topicId ? (masteryMap.get(topicId) ?? null) : null;
+  const subtopicProgress = useMemo(() => {
+    if (!masteryRow) return {};
+    try {
+      const raw = JSON.parse(masteryRow.progress);
+      return typeof raw === "object" && raw !== null
+        ? raw as Record<string, { taught?: boolean; quizzed?: boolean; lastScore?: number | null }>
+        : {};
+    } catch {
+      return {};
+    }
+  }, [masteryRow]);
 
   // Initial load
   useEffect(() => {
@@ -138,6 +165,31 @@ export default function LearnScreen() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // Cache subtopics for the current topic so the tutor can teach/quiz per subtopic.
+  useEffect(() => {
+    if (!student || !topicId || !subjectId) return;
+    let cancelled = false;
+    (async () => {
+      const t = getTopic(topicId);
+      if (t) setSubtopics(getTopicSubtopics(t));
+      try {
+        const cfg = await resolveLlmConfigById(student.id);
+        if (cancelled) return;
+        const ok = await ensureSubtopicsCached(topicId, cfg);
+        if (ok && !cancelled) {
+          const refreshed = getTopic(topicId);
+          if (refreshed) {
+            setSubtopics(getTopicSubtopics(refreshed));
+            setTopics(listTopics(subjectId));
+          }
+        }
+      } catch {
+        // Provider not ready (no API key / model not downloaded) — retry when the topic reopens.
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [student, topicId, subjectId]);
+
   function loadRecentMessages(studentId: string, sid: string) {
     try {
       const session = getOrCreateSession(studentId, sid);
@@ -177,6 +229,22 @@ export default function LearnScreen() {
     });
   }
 
+  function markNextTaught() {
+    if (!student || !topicId) return;
+    try {
+      const row = getMastery(student.id, topicId);
+      const prog = parseProgress(row?.progress ?? "{}");
+      const cached = subtopics.length > 0 ? subtopics : [];
+      const subs = cached.length > 0
+        ? cached
+        : (getTopic(topicId) ? getTopicSubtopics(getTopic(topicId)!) : []);
+      const next = findNextToTeach(subs, prog);
+      if (next) markSubtopicTaught(student.id, topicId, next.name);
+    } catch {
+      // Non-fatal — the next teach turn will try again.
+    }
+  }
+
   async function streamTutor(mode: TutorMode, userText?: string) {
     if (!student || !subjectId || !topicId || busy) return;
     setKeyError(null);
@@ -214,6 +282,7 @@ export default function LearnScreen() {
       }
       if (mode === "teach") {
         awardForTeach(student.id);
+        markNextTaught();
       }
     } catch (e) {
       const msg = String(e);
@@ -330,6 +399,41 @@ export default function LearnScreen() {
               {BLOOM_NAMES[(masteryMap.get(topicId)?.bloomLevel ?? 1) - 1]}
             </Text>
           </View>
+        </View>
+      )}
+
+      {/* Lesson plan for the current topic */}
+      {subtopics.length > 0 && (
+        <View style={styles.planBar} testID="lesson-plan">
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.planRow}
+          >
+            {subtopics.map((s) => {
+              const st = subtopicProgress[s.name];
+              const done = st?.quizzed;
+              const started = !done && !!st?.taught;
+              return (
+                <View
+                  key={s.name}
+                  style={[styles.planChip, (done || started) && styles.planChipDone]}
+                  testID={`plan-${s.name}`}
+                >
+                  <Text style={[styles.planChipText, (done || started) && styles.planChipTextDone]}>
+                    {done ? "✔" : started ? "📖" : "○"} {s.name}
+                  </Text>
+                </View>
+              );
+            })}
+          </ScrollView>
+          {masteryRow?.phase && (
+            <View style={styles.phasePill} testID="phase-chip">
+              <Text style={styles.phasePillText}>
+                {PHASE_LABELS[masteryRow.phase as keyof typeof PHASE_LABELS] ?? masteryRow.phase}
+              </Text>
+            </View>
+          )}
         </View>
       )}
 
@@ -660,6 +764,39 @@ const styles = StyleSheet.create({
     borderRadius: 12,
   },
   bloomText: { fontSize: 11, color: "#6366f1", fontWeight: "600" },
+  // Lesson plan
+  planBar: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    gap: 8,
+    borderBottomWidth: 1,
+    borderColor: "#e5e7eb",
+  },
+  planRow: { flexDirection: "row", gap: 6, alignItems: "center" },
+  planChip: {
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: "#d1d5db",
+    backgroundColor: "#fff",
+    paddingHorizontal: 10,
+    paddingVertical: 3,
+  },
+  planChipDone: {
+    backgroundColor: "#d1fae5",
+    borderColor: "#a7f3d0",
+  },
+  planChipText: { fontSize: 11, color: "#6b7280" },
+  planChipTextDone: { color: "#065f46", fontWeight: "500" },
+  phasePill: {
+    marginLeft: "auto",
+    backgroundColor: "#ede9fe",
+    borderRadius: 999,
+    paddingHorizontal: 10,
+    paddingVertical: 3,
+  },
+  phasePillText: { fontSize: 11, color: "#7c3aed", fontWeight: "600" },
   // Action bar
   actionBar: {
     flexDirection: "row",

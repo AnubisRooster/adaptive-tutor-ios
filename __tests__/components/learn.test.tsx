@@ -27,8 +27,12 @@ jest.mock("@/lib/data", () => ({
     { id: "t2", subjectId: "philosophy", name: "Ethics", description: "Study of morality.", prerequisites: "[]", subtopics: "[]", orderIndex: 1 },
   ]),
   getMasteryMap: jest.fn().mockReturnValue(new Map()),
+  getMastery: jest.fn().mockReturnValue({ studentId: "stu-1", topicId: "t1", mastery: 0.4, bloomLevel: 2, phase: "learn", progress: "{}", attempts: 3, correct: 2, updatedAt: 0 }),
+  getTopic: jest.fn().mockReturnValue({ id: "t1", subjectId: "philosophy", name: "Epistemology", description: "Study of knowledge.", prerequisites: "[]", subtopics: "[]", orderIndex: 0 }),
   listOpenGaps: jest.fn().mockReturnValue([]),
   getTopicSubtopics: jest.fn().mockReturnValue([]),
+  markSubtopicTaught: jest.fn(),
+  parseProgress: jest.fn().mockReturnValue({}),
   getOrCreateSession: jest.fn().mockReturnValue({ id: "sess-1", studentId: "stu-1", subjectId: "philosophy", startedAt: 0, lastActiveAt: 0 }),
   getRecentMessages: jest.fn().mockReturnValue([]),
   addMessage: jest.fn(),
@@ -47,6 +51,9 @@ jest.mock("@/lib/gamify", () => ({
   XP_TEACH: 5,
   addXp: jest.fn(),
   awardForTeach: jest.fn().mockReturnValue({ totalXp: 10, streak: 1 }),
+}));
+jest.mock("@/lib/subtopics-gen", () => ({
+  ensureSubtopicsCached: jest.fn().mockResolvedValue(true),
 }));
 
 import { streamChat, resolveLlmConfigById } from "@/lib/llm";
@@ -101,7 +108,7 @@ describe("LearnScreen", () => {
   });
 
   it("shows API key error banner when no key is set", async () => {
-    mockResolve.mockRejectedValueOnce(new Error("No OpenRouter API key found. Go to Settings and enter your key."));
+    mockResolve.mockRejectedValue(new Error("No OpenRouter API key found. Go to Settings and enter your key."));
     const { findByText } = await render(<LearnScreen />);
     const btn = await findByText("Teach me");
     await fireEvent.press(btn);

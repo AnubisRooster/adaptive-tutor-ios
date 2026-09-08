@@ -445,7 +445,7 @@ export type SubtopicProgress = {
 export type ProgressMap = Record<string, SubtopicProgress>;
 export type TopicPhase = "learn" | "quiz" | "mastery" | "complete";
 
-function parseProgress(json: string): ProgressMap {
+export function parseProgress(json: string): ProgressMap {
   try {
     return JSON.parse(json) as ProgressMap;
   } catch {
