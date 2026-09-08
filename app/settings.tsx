@@ -118,7 +118,8 @@ export default function SettingsScreen() {
 
   // Separate effect: check which on-device models are already downloaded.
   useEffect(() => {
-    refreshDownloadedStatus();
+    const timer = setTimeout(refreshDownloadedStatus, 0);
+    return () => clearTimeout(timer);
   }, [refreshDownloadedStatus]);
 
   // ── OpenRouter helpers ────────────────────────────────────────────────────

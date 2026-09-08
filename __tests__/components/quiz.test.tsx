@@ -25,7 +25,7 @@ jest.mock("@/lib/data", () => ({
   getMastery: jest.fn().mockReturnValue({ mastery: 0.4, bloomLevel: 2, attempts: 3, correct: 2 }),
 }));
 jest.mock("@/lib/llm", () => ({
-  resolveLlmConfig: jest.fn().mockResolvedValue({ provider: "openrouter", model: "test", apiKey: "sk-test" }),
+  resolveLlmConfigById: jest.fn().mockResolvedValue({ provider: "openrouter", model: "test", apiKey: "sk-test" }),
 }));
 jest.mock("@/lib/quiz-gen", () => ({
   generateQuizQuestion: jest.fn(),

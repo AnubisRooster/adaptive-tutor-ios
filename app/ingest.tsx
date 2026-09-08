@@ -54,7 +54,6 @@ export default function IngestScreen() {
   const [courseError, setCourseError] = useState("");
   const [seedMsg, setSeedMsg] = useState("");
   const [curriculum, setCurriculum] = useState<LessonPlan[]>([]);
-  const [firstTopicId, setFirstTopicId] = useState<string | null>(null);
 
   function selectSubject(id: string) {
     setSubjectId(id);
@@ -106,7 +105,6 @@ export default function IngestScreen() {
     setCourseError("");
     setSeedMsg("Planning your course curriculum…");
     setCurriculum([]);
-    setFirstTopicId(null);
 
     try {
       const studentId = await getActiveStudentId();
@@ -132,7 +130,7 @@ export default function IngestScreen() {
       refreshSubjects();
 
       // 3. Create all lesson topics + seed Lesson 1
-      const topicIds = await seedCourse(
+      await seedCourse(
         sub,
         lessons,
         studentId,
@@ -149,7 +147,6 @@ export default function IngestScreen() {
         }
       );
 
-      setFirstTopicId(topicIds[0] ?? null);
       setCourseName("");
       setCourseDesc("");
       setCoursePhase("done");
@@ -419,7 +416,7 @@ export default function IngestScreen() {
                 </TouchableOpacity>
                 <TouchableOpacity
                   style={styles.addMoreBtn}
-                  onPress={() => { setCoursePhase("idle"); setCurriculum([]); setSeedMsg(""); setFirstTopicId(null); }}
+                  onPress={() => { setCoursePhase("idle"); setCurriculum([]); setSeedMsg(""); }}
                   testID="add-another-course-btn"
                 >
                   <Text style={styles.addMoreText}>Create another course</Text>

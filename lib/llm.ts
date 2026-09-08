@@ -35,6 +35,8 @@ export type LlmMessage = {
 type ChatOpts = {
   temperature?: number;
   format?: object;
+  /** Cap the number of tokens the model may generate. */
+  maxTokens?: number;
 };
 
 // ---------- Config resolution ----------
@@ -80,7 +82,10 @@ export async function* streamChat(
   opts: ChatOpts = {}
 ): AsyncGenerator<string> {
   if (cfg.provider === "on-device") {
-    yield* onDeviceChatStream(messages, { temperature: opts.temperature });
+    yield* onDeviceChatStream(messages, {
+      temperature: opts.temperature,
+      maxTokens: opts.maxTokens,
+    });
   } else {
     yield* openrouterChatStream(cfg.apiKey, cfg.model, messages, opts);
   }
@@ -101,6 +106,7 @@ export async function* streamStructured(
   if (cfg.provider === "on-device") {
     const result = await onDeviceChatOnce(messages, {
       temperature: opts.temperature,
+      maxTokens: opts.maxTokens,
     });
     yield result;
   } else {
@@ -116,7 +122,10 @@ export async function chatOnce(
   opts: ChatOpts = {}
 ): Promise<string> {
   if (cfg.provider === "on-device") {
-    return onDeviceChatOnce(messages, { temperature: opts.temperature });
+    return onDeviceChatOnce(messages, {
+      temperature: opts.temperature,
+      maxTokens: opts.maxTokens,
+    });
   }
   return openrouterChatOnce(cfg.apiKey, cfg.model, messages, opts);
 }

@@ -106,6 +106,8 @@ export type ORMessage = {
 type ChatOpts = {
   temperature?: number;
   format?: object;
+  /** Cap the number of tokens the model may generate. */
+  maxTokens?: number;
   /** Override the per-stream idle timeout (ms). Defaults to STREAM_IDLE_TIMEOUT_MS. */
   streamTimeoutMs?: number;
 };
@@ -133,6 +135,9 @@ function buildBody(
     stream,
     temperature: opts.temperature ?? 0.6,
   };
+  if (opts.maxTokens !== undefined) {
+    body.max_tokens = opts.maxTokens;
+  }
   if (opts.format) {
     body.response_format = {
       type: "json_schema",

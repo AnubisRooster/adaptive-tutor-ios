@@ -1,3 +1,4 @@
+/* eslint-disable import/first */
 // Stub the data layer so the DB chain (expo-sqlite → expo-asset) is not loaded in unit tests.
 jest.mock("@/lib/data", () => ({
   getStudent: jest.fn(),

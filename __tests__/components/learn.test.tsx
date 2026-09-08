@@ -5,6 +5,7 @@ import LearnScreen from "@/app/learn";
 
 jest.mock("expo-router", () => ({
   useRouter: () => ({ replace: jest.fn(), push: jest.fn(), back: jest.fn() }),
+  useFocusEffect: jest.fn(),
 }));
 jest.mock("@/lib/session", () => ({
   getActiveStudentId: jest.fn().mockResolvedValue("stu-1"),
@@ -36,7 +37,7 @@ jest.mock("@/lib/orchestrator", () => ({
   buildTutorTurn: jest.fn().mockResolvedValue({ messages: [], topicName: "Epistemology", subjectName: "Philosophy" }),
 }));
 jest.mock("@/lib/llm", () => ({
-  resolveLlmConfig: jest.fn(),
+  resolveLlmConfigById: jest.fn(),
   streamChat: jest.fn(),
 }));
 jest.mock("@/lib/adaptive", () => ({
@@ -48,10 +49,10 @@ jest.mock("@/lib/gamify", () => ({
   awardForTeach: jest.fn().mockReturnValue({ totalXp: 10, streak: 1 }),
 }));
 
-import { streamChat, resolveLlmConfig } from "@/lib/llm";
+import { streamChat, resolveLlmConfigById } from "@/lib/llm";
 
 const mockStream = streamChat as jest.Mock;
-const mockResolve = resolveLlmConfig as jest.Mock;
+const mockResolve = resolveLlmConfigById as jest.Mock;
 
 async function* fakeStream() { yield "Hello from the tutor!"; }
 
