@@ -1,5 +1,14 @@
 # Changelog
 
+## 2026-09-08
+
+- feat: progressive lessons + multi-question quiz sessions (60462f8)
+- fix: restore green baseline (typecheck, lint, tests) (9f4d856)
+- chore(graphify): refresh knowledge graph artifacts [skip ci] (f672807)
+- chore(graphify): refresh knowledge graph artifacts [skip ci] (fffa6bf)
+- chore(gitnexus): refresh architecture findings [skip ci] (b6be54d)
+
+
 ## 2026-09-06
 
 - ci: add GitNexus/Graphify/Changelog hooks and workflows (c027ecc)
