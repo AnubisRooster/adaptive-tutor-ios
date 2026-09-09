@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Adaptive Tutor — Privacy Policy</title>
+<meta name="description" content="Privacy Policy for Adaptive Tutor (iOS), a local-first AI study app." />
+<style>
+  :root { color-scheme: light; }
+  * { box-sizing: border-box; }
+  body { margin: 0; font: 16px/1.6 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; color: #1f2937; background: #fff; }
+  main { max-width: 720px; margin: 0 auto; padding: 32px 24px 80px; }
+  h1 { font-size: 28px; margin: 0 0 4px; color: #111; }
+  h2 { font-size: 20px; margin: 40px 0 8px; color: #111; }
+  p { margin: 0 0 16px; }
+  ul { margin: 0 0 16px; padding-left: 24px; }
+  li { margin-bottom: 6px; }
+  .muted { color: #6b7280; font-size: 14px; margin: 0 0 32px; }
+  .tldr { background: #f3f4f6; border-left: 4px solid #6366f1; padding: 16px 20px; border-radius: 8px; margin: 24px 0; }
+  a { color: #6366f1; }
+  code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0.9em; background: #f3f4f6; padding: 2px 5px; border-radius: 4px; }
+  footer { max-width: 720px; margin: 0 auto; padding: 24px; border-top: 1px solid #e5e7eb; color: #9ca3af; font-size: 13px; }
+</style>
+</head>
+<body>
+<main>
+  <h1>Adaptive Tutor Privacy Policy</h1>
+  <p class="muted">Effective date: September 9, 2026</p>
+
+  <div class="tldr">
+    <p><strong>In one line:</strong> Adaptive Tutor is a private, local-first study app. By default everything you
+    type and learn stays on your device. There are no accounts, no ads, no trackers, and no servers run by us.
+    An optional Cloud mode lets you bring your own OpenRouter API key, in which case the prompts you choose to send
+    go to that provider.</p>
+  </div>
+
+  <h2>1. Who we are</h2>
+  <p>Adaptive Tutor ("we", "the App") is an iOS study and tutoring application that uses AI models to teach
+  subjects, generate lessons and quizzes, and track your mastery. This policy explains what information the App
+  processes, where it is stored, and what happens in Cloud mode.</p>
+
+  <h2>2. Information you provide</h2>
+  <ul>
+    <li><strong>Profile name.</strong> Stored only on your device to label learning profiles (e.g. "Maya").</li>
+    <li><strong>Passcode / PIN and biometric lock.</strong> If you enable a lock, the PIN and your Face ID / Touch ID
+    preference are stored using the secure storage provided by your device (iOS Keychain). Biometric data itself is
+    never readable by the App — it is handled entirely by iOS.</li>
+    <li><strong>Learning activity.</strong> Your answers, quiz responses, grading results, streaks, XP, mastery
+    levels, and achievements are stored in a local database on your device.</li>
+    <li><strong>Imported study material.</strong> If you add a note or ingest content from a URL, that content is
+    retrieved and stored locally on your device so Search and tutoring can use it offline.</li>
+    <li><strong>Optional OpenRouter API key.</strong> If you enable Cloud mode, the App stores the API key you paste
+    in your device's secure storage (iOS Keychain). The key is never sent to us — it is used only to authenticate
+    requests you make to OpenRouter directly from the App.</li>
+    <li><strong>Study reminders.</strong> If you enable reminders, the schedule is stored locally and notifications
+    are generated on your device. Push notifications are not used.</li>
+  </ul>
+
+  <h2>3. Information collected automatically</h2>
+  <p>The App does not run our own analytics, crash reporting, or advertising SDKs, and does not send information to
+  us. You may separately receive standard App Store diagnostics (for example, delivered by Apple when you report a
+  problem or when crash diagnostics are enabled in iOS Settings). Apple's handling of such diagnostics is governed by
+  Apple's own policies, not this one.</p>
+
+  <h2>4. On-Device mode (default)</h2>
+  <p>By default the App runs entirely on your device using a downloaded AI model (built on llama.cpp with the Metal
+  GPU backend). In On-Device mode <strong>nothing you type, ask, or learn is sent over the network</strong>. Lessons,
+  quizzes, and grades are generated locally, and all data remains in the App's local database and secure storage.</p>
+
+  <h2>5. Cloud mode (optional, bring-your-own-key)</h2>
+  <p>Cloud mode is optional and is never assumed. When you switch the LLM provider to OpenRouter in Settings, the App
+  asks you to confirm a consent notice before Cloud mode becomes active. In Cloud mode:</p>
+  <ul>
+    <li>Your <strong>prompts and answers are sent to OpenRouter</strong> (openrouter.ai) to generate tutoring
+    responses and grades, using <strong>your own API key</strong>.</li>
+    <li>OpenRouter passes the content to the model provider you select (for example, Google Gemma). Those providers
+    have their own privacy policies, which you can review before choosing a model.</li>
+    <li>We do not see, store, sell, or use your prompts. The App itself never transmits anything on your behalf
+    other than the requests you initiate to the provider you configured.</li>
+  </ul>
+  <p>You can turn Cloud mode off at any time in Settings. Profiles and progress stay on your device regardless of
+  which mode is active.</p>
+
+  <h2>6. How we share information</h2>
+  <ul>
+    <li>We do <strong>not</strong> sell, rent, or trade your personal information.</li>
+    <li>We do <strong>not</strong> use your data for advertising or profiling.</li>
+    <li>The only data that leaves your device is what you explicitly send to OpenRouter (and onward to a model
+    provider) in Cloud mode, plus routine network requests the App makes on your behalf to the provider you selected.</li>
+  </ul>
+
+  <h2>7. Retention</h2>
+  <p>All of your data lives on your device. We do not store copies of your data anywhere, so there is no retention
+  period beyond the lifetime of the data on your device. An API key stored for a profile remains in your device's
+  secure storage until you delete it or delete the profile.</p>
+
+  <h2>8. Deleting your data</h2>
+  <ul>
+    <li>Deleting a profile in the App removes that profile's locally stored messages, progress, settings, and secure
+    items (including the API key, if one was stored).</li>
+    <li>You can delete individual profiles or all data by removing the App from your device (uninstall deletes the
+    App's local database and secure storage).</li>
+  </ul>
+
+  <h2>9. Children's privacy (COPPA / GDPR-K)</h2>
+  <p>The App is designed for general audiences aged 13 and up and is not directed at children under 13. We do not
+  knowingly collect personal information from children under 13. Because data is stored locally and is not
+  transmitted unless you explicitly enable Cloud mode, we hold no personal information about any user, including
+  minors. Parental or guardian guidance is recommended for learners under 18.</p>
+
+  <h2>10. Security</h2>
+  <p>Sensitive items such as your API key, PIN, and biometric lock setting are stored in the iOS Keychain via secure
+  storage provided by the platform. Learning data is stored in a local database on your device. The App runs no
+  servers, so there is no remote database that could be exposed. As with any device, we recommend keeping your device
+  locked and up to date.</p>
+
+  <h2>11. AI-generated content</h2>
+  <p>Tutoring responses, lessons, quizzes, and grades are generated by an AI model and may occasionally be
+  inaccurate, incomplete, or unsuitable for your goals. AI content is a study aid, not a substitute for professional
+  medical, legal, or financial advice. The App surfaces this disclosure at setup and in its in-app Privacy &amp; AI
+  Disclosure screen.</p>
+
+  <h2>12. Your rights and international users</h2>
+  <p>Because we do not collect, store, or process your personal data on systems we operate, there is nothing for you
+  to access, export, correct, or erase from us — deletion happens entirely inside the App (see section 8). If you are
+  in a jurisdiction with data-protection laws (such as the GDPR or UK GDPR), this design means the App performs no
+  "controller" processing of your data beyond what you keep on your own device.</p>
+
+  <h2>13. Changes to this policy</h2>
+  <p>We may update this policy from time to time, for example when the App's features change. Updates will be
+  reflected in this document with a new "Effective date" above. The in-app Privacy &amp; AI Disclosure screen will be
+  kept consistent with this policy.</p>
+
+  <h2>14. Contact</h2>
+  <p>Questions about privacy or this policy? Contact us at
+  <a href="mailto:privacy@adaptivetutor.example">privacy@adaptivetutor.example</a>.</p>
+  <!-- TODO before going live: replace the contact email above and the URL constants below with your real page. -->
+</main>
+<footer>
+  © 2026 Adaptive Tutor. · <a href="./privacy-choices.html">Manage your data</a>
+</footer>
+</body>
+</html>

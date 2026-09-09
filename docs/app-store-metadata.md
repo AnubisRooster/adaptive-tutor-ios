@@ -69,15 +69,18 @@ Anyone 13+ who wants a focused, judgmental-free study partner for Philosophy, Ps
 
 ## Placeholders to replace before `eas metadata:push`
 
-`store.config.json` ships with working copy but placeholder contact/URL fields — EAS validation
-won't flag them, Apple's review team or a missing page will:
+`store.config.json` ships with working copy but a placeholder contact — EAS validation won't flag
+it, Apple's review team or the page itself will:
 
 - `apple.review.firstName` / `lastName` — real App Store Connect contact.
 - `apple.review.email` — reachable inbox (currently `privacy@adaptivetutor.example`).
 - `apple.review.phone` — real formatted phone (`+1 …`).
-- `apple.info.en-US.marketingUrl` / `supportUrl` / `privacyPolicyUrl` / `privacyChoicesUrl` —
-  these point at `adaptivetutor.example`. A privacy policy URL is **required** for all apps;
-  publish a real page before pushing.
+
+Privacy URLs are resolved: [`docs/privacy-policy.html`](../docs/privacy-policy.html) and
+[`docs/privacy-choices.html`](../docs/privacy-choices.html) are deployed to GitHub Pages by
+`.github/workflows/privacy-pages.yml` → `https://anubisrooster.github.io/adaptive-tutor-ios/…`.
+Before relying on them, one manual step: enable **Settings → Pages → Source "GitHub Actions"** in
+the repo. If the repo owner/name differs, update the two URLs in `store.config.json`.
 
 `npm run metadata:push` also needs an App Store Connect API key (`eas init`/`eas credentials` +
 ASC key) and the build already created in App Store Connect.

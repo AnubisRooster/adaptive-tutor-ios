@@ -43,10 +43,8 @@
         ],
         "releaseNotes": "First release: private local-first AI tutor — on-device model, adaptive quizzes, URL notes, progress tracking, and in-app search.",
         "promoText": "Learn any subject with a private on-device AI tutor, adaptive quizzes, progress tracking, and your own imported notes. No account required.",
-        "marketingUrl": "https://adaptivetutor.example",
-        "supportUrl": "https://adaptivetutor.example/support",
-        "privacyPolicyUrl": "https://adaptivetutor.example/privacy",
-        "privacyChoicesUrl": "https://adaptivetutor.example/privacy-choices"
+        "privacyPolicyUrl": "https://anubisrooster.github.io/adaptive-tutor-ios/privacy-policy.html",
+        "privacyChoicesUrl": "https://anubisrooster.github.io/adaptive-tutor-ios/privacy-choices.html"
       }
     },
     "release": {
