@@ -6,7 +6,7 @@ _Auto-generated from the GitNexus knowledge graph on every push to `main`. Do no
 
 | nodes | edges |
 | ----- | ----- |
-| 1050 | 1503 |
+| 1065 | 1518 |
 
 ## God nodes (highest out-degree, tests excluded)
 
@@ -21,4 +21,4 @@ _Auto-generated from the GitNexus knowledge graph on every push to `main`. Do no
 | lib | lib | 29 |
 | learn.tsx | app/learn.tsx | 26 |
 | graphify_pipeline.py | scripts/graphify_pipeline.py | 22 |
-| settings.tsx | app/settings.tsx | 21 |
+| schema.ts | db/schema.ts | 21 |
