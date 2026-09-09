@@ -2,6 +2,13 @@
 
 ## 2026-09-09
 
+- docs: add in-app search screenshots (3f32a28)
+- chore(gitnexus): refresh architecture findings [skip ci] (d2c1905)
+- chore(graphify): refresh knowledge graph artifacts [skip ci] (99f7338)
+
+
+## 2026-09-09
+
 - feat: in-app search over all saved sources (BM25) (1504c3f)
 - chore(gitnexus): refresh architecture findings [skip ci] (aeabaab)
 - chore(graphify): refresh knowledge graph artifacts [skip ci] (5556c82)
