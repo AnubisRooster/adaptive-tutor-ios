@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { useFocusEffect, useRouter } from "expo-router";
+import { useFocusEffect, useLocalSearchParams, useRouter } from "expo-router";
 import {
   View,
   Text,
@@ -61,6 +61,7 @@ const PHASE_LABELS: Record<string, string> = {
 
 export default function LearnScreen() {
   const router = useRouter();
+  const params = useLocalSearchParams<{ subjectId?: string; topicId?: string }>();
   const [student, setStudent] = useState<Student | null>(null);
   const [subjects, setSubjects] = useState<ReturnType<typeof listSubjects>>([]);
   const [subjectId, setSubjectId] = useState("");
@@ -153,16 +154,26 @@ export default function LearnScreen() {
       const subs = listSubjects();
       setSubjects(subs);
       if (subs.length === 0) return;
-      const first = subs[0];
-      setSubjectId(first.id);
-      const tList = listTopics(first.id);
+      // Prefer a subject/topic passed in (e.g. from Search), falling back to defaults.
+      let sid = typeof params.subjectId === "string" && params.subjectId ? params.subjectId : "";
+      let tid = typeof params.topicId === "string" && params.topicId ? params.topicId : "";
+      if (!subs.some((s) => s.id === sid)) {
+        const first = subs[0];
+        sid = first.id;
+        tid = "";
+      }
+      const tList = listTopics(sid);
+      setSubjectId(sid);
       setTopics(tList);
       if (tList.length > 0) {
-        const recommended = recommendStartTopic(id, first.id);
-        setTopicId(recommended?.id ?? tList[0].id);
+        if (!tList.some((t) => t.id === tid)) {
+          const recommended = recommendStartTopic(id, sid);
+          tid = recommended?.id ?? tList[0].id;
+        }
+        setTopicId(tid);
       }
-      // Load recent messages for first subject
-      loadRecentMessages(id, first.id);
+      // Load recent messages for the active subject
+      loadRecentMessages(id, sid);
     })();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -375,6 +386,15 @@ export default function LearnScreen() {
         </Text>
         <TouchableOpacity onPress={() => router.push("/progress")} style={styles.avatarBtn} testID="progress-btn">
           <ProfileAvatar name={student.name} color={student.color} size={30} />
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={styles.searchBtn}
+          onPress={() => router.push("/search")}
+          testID="search-btn"
+          accessibilityRole="button"
+          accessibilityLabel="Search notes and sources"
+        >
+          <Text style={styles.searchIcon}>🔍</Text>
         </TouchableOpacity>
         <TouchableOpacity style={styles.switchBtn} onPress={switchProfile}>
           <Text style={styles.switchBtnText}>Switch</Text>
@@ -697,6 +717,18 @@ export default function LearnScreen() {
             }}
           />
 
+          {/* Search sources */}
+          <TouchableOpacity
+            style={styles.addMaterialBtn}
+            onPress={() => {
+              setNavOpen(false);
+              router.push("/search");
+            }}
+            testID="search-drawer-btn"
+          >
+            <Text style={styles.addMaterialText}>🔍 Search notes &amp; sources</Text>
+          </TouchableOpacity>
+
           {/* Add material link */}
           <TouchableOpacity
             style={styles.addMaterialBtn}
@@ -756,6 +788,8 @@ const styles = StyleSheet.create({
   menuIcon: { fontSize: 18, color: "#374151" },
   headerTitle: { flex: 1, fontSize: 16, fontWeight: "600", color: "#111" },
   avatarBtn: { padding: 2 },
+  searchBtn: { padding: 4 },
+  searchIcon: { fontSize: 16 },
   switchBtn: {
     paddingHorizontal: 10,
     paddingVertical: 5,

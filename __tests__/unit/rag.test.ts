@@ -1,18 +1,23 @@
 /* eslint-disable import/first */
 jest.mock("@/lib/data", () => ({
   listChunks: jest.fn(),
+  listSubjects: jest.fn(),
 }));
 
-import { retrieveContext, contextBlock } from "@/lib/rag";
-import { listChunks } from "@/lib/data";
+import { retrieveContext, contextBlock, searchChunks } from "@/lib/rag";
+import { listChunks, listSubjects } from "@/lib/data";
 
 const mockListChunks = listChunks as jest.Mock;
+const mockListSubjects = listSubjects as jest.Mock;
 
 function makeChunk(id: string, text: string, source = "url") {
   return { id, text, source, subjectId: "sub1", topicId: null, sourceId: null, embedding: null, createdAt: 0 };
 }
 
-beforeEach(() => mockListChunks.mockClear());
+beforeEach(() => {
+  mockListChunks.mockClear();
+  mockListSubjects.mockClear();
+});
 
 describe("retrieveContext", () => {
   it("returns empty array when no chunks exist", async () => {
@@ -56,6 +61,47 @@ describe("retrieveContext", () => {
     mockListChunks.mockReturnValue([]);
     await retrieveContext("my-subject", undefined, "anything");
     expect(mockListChunks).toHaveBeenCalledWith("my-subject");
+  });
+});
+
+describe("searchChunks", () => {
+  beforeEach(() => {
+    mockListSubjects.mockReturnValue([{ id: "sub1" }]);
+  });
+
+  it("returns an empty list for a blank query", () => {
+    const results = searchChunks("   ");
+    expect(results).toEqual([]);
+  });
+
+  it("returns an empty list when no subjects have chunks", () => {
+    mockListChunks.mockReturnValue([]);
+    expect(searchChunks("photosynthesis")).toEqual([]);
+  });
+
+  it("scores across subjects and ranks the best hit first", () => {
+    mockListSubjects.mockReturnValue([{ id: "bio" }, { id: "hist" }]);
+    mockListChunks.mockImplementation((sid: string) =>
+      sid === "bio"
+        ? [makeChunk("1", "Photosynthesis converts sunlight into glucose.", "bio")]
+        : [makeChunk("2", "The French Revolution began in 1789.", "hist")]
+    );
+    const results = searchChunks("photosynthesis sunlight");
+    expect(results).toHaveLength(1);
+    expect(results[0].subjectId).toBe("bio");
+  });
+
+  it("carries subject/topic metadata and respects the limit", () => {
+    const chunks = Array.from({ length: 10 }, (_, i) => ({
+      ...makeChunk(String(i), `Photosynthesis fact ${i} about light and chlorophyll.`, "notes"),
+      topicId: "t1",
+    }));
+    mockListChunks.mockReturnValue(chunks);
+    const results = searchChunks("photosynthesis chlorophyll", 3);
+    expect(results.length).toBeLessThanOrEqual(3);
+    expect(results[0].topicId).toBe("t1");
+    expect(results[0].source).toBe("notes");
+    expect(results[0].score).toBeGreaterThan(0);
   });
 });
 

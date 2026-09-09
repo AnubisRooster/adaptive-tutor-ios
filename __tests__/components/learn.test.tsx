@@ -3,9 +3,13 @@ import React from "react";
 import { render, fireEvent, waitFor } from "@testing-library/react-native";
 import LearnScreen from "@/app/learn";
 
+const mockReplace = jest.fn();
+const mockPush = jest.fn();
+const mockParams: jest.Mock = jest.fn().mockReturnValue({});
 jest.mock("expo-router", () => ({
-  useRouter: () => ({ replace: jest.fn(), push: jest.fn(), back: jest.fn() }),
+  useRouter: () => ({ replace: mockReplace, push: mockPush, back: jest.fn() }),
   useFocusEffect: jest.fn(),
+  useLocalSearchParams: () => mockParams(),
 }));
 jest.mock("@/lib/session", () => ({
   getActiveStudentId: jest.fn().mockResolvedValue("stu-1"),
@@ -69,6 +73,9 @@ async function* fakeStream() { yield "Hello from the tutor!"; }
 beforeEach(() => {
   mockStream.mockImplementation(fakeStream);
   mockResolve.mockResolvedValue({ provider: "openrouter", model: "google/gemma-3-27b-it:free", apiKey: "sk-test" });
+  mockParams.mockReturnValue({});
+  mockReplace.mockClear();
+  mockPush.mockClear();
 });
 
 describe("LearnScreen", () => {
@@ -118,5 +125,33 @@ describe("LearnScreen", () => {
     await findByTestId("preview-mode-bar");
     const matches = await findAllByText(/preview mode/i);
     expect(matches.length).toBeGreaterThan(0);
+  });
+
+  it("opens the search screen from the header button", async () => {
+    const { findByText, findByTestId } = await render(<LearnScreen />);
+    await findByText("Philosophy");
+    await fireEvent.press(await findByTestId("search-btn"));
+    expect(mockPush).toHaveBeenCalledWith("/search");
+  });
+
+  it("opens the search screen from the topic drawer", async () => {
+    const { findByText, findByTestId } = await render(<LearnScreen />);
+    await findByText("Philosophy");
+    await fireEvent.press(await findByTestId("menu-btn"));
+    await fireEvent.press(await findByTestId("search-drawer-btn"));
+    expect(mockPush).toHaveBeenCalledWith("/search");
+  });
+
+  it("preselects a subject and topic passed via params", async () => {
+    mockParams.mockReturnValue({ subjectId: "philosophy", topicId: "t2" });
+    const { findByText } = await render(<LearnScreen />);
+    await findByText("Philosophy");
+    await findByText("Ethics");
+  });
+
+  it("falls back to the first topic for an unknown topic param", async () => {
+    mockParams.mockReturnValue({ subjectId: "philosophy", topicId: "does-not-exist" });
+    const { findByText } = await render(<LearnScreen />);
+    await findByText("Epistemology");
   });
 });

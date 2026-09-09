@@ -1,8 +1,16 @@
-import { listChunks } from "@/lib/data";
+import { listChunks, listSubjects } from "@/lib/data";
 
 export type RetrievedChunk = {
   text: string;
   source: string;
+  score: number;
+};
+
+export type SearchHit = {
+  subjectId: string;
+  topicId: string | null;
+  source: string;
+  text: string;
   score: number;
 };
 
@@ -37,21 +45,13 @@ function scoreBm25(
   return score;
 }
 
-/** Retrieve the top-k chunks relevant to a query for a given subject/topic using BM25. */
-export async function retrieveContext(
-  subjectId: string,
-  _topicId: string | undefined,
-  query: string,
-  limit = 4
-): Promise<RetrievedChunk[]> {
-  if (!query.trim()) return [];
-  const chunks = listChunks(subjectId);
-  if (chunks.length === 0) return [];
-
+/** Score every chunk against a query, returning only positively-scoring hits, best first. */
+function scoreCorpus<T>(chunks: T[], getText: (c: T) => string, query: string): (T & { score: number })[] {
+  if (!query.trim() || chunks.length === 0) return [];
   const queryTerms = tokenize(query);
   if (queryTerms.length === 0) return [];
 
-  const tokenized = chunks.map((c) => tokenize(c.text));
+  const tokenized = chunks.map((c) => tokenize(getText(c)));
   const totalLen = tokenized.reduce((s, t) => s + t.length, 0);
   const avgDocLen = totalLen / tokenized.length;
 
@@ -68,18 +68,42 @@ export async function retrieveContext(
     const termFreq: Record<string, number> = {};
     for (const t of terms) termFreq[t] = (termFreq[t] ?? 0) + 1;
     const score = scoreBm25(queryTerms, docFreq, termFreq, terms.length, avgDocLen, chunks.length);
-    return { score, chunk };
+    return { chunk, score };
   });
 
   return scored
     .filter(({ score }) => score > 0)
     .sort((a, b) => b.score - a.score)
-    .slice(0, limit)
-    .map(({ score, chunk }) => ({
-      text: chunk.text,
-      source: chunk.source,
-      score,
-    }));
+    .map(({ chunk, score }) => ({ ...chunk, score }));
+}
+
+/** Retrieve the top-k chunks relevant to a query for a given subject/topic using BM25. */
+export async function retrieveContext(
+  subjectId: string,
+  _topicId: string | undefined,
+  query: string,
+  limit = 4
+): Promise<RetrievedChunk[]> {
+  const scored = scoreCorpus(listChunks(subjectId), (c) => c.text, query);
+  return scored.slice(0, limit).map(({ text, source, score }) => ({ text, source, score }));
+}
+
+/** Search every subject's knowledge chunks with BM25 and return the best hits. */
+export function searchChunks(query: string, limit = 25): SearchHit[] {
+  const hits: SearchHit[] = [];
+  for (const sub of listSubjects()) {
+    for (const chunk of listChunks(sub.id)) {
+      hits.push({
+        subjectId: sub.id,
+        topicId: chunk.topicId,
+        source: chunk.source,
+        text: chunk.text,
+        score: 0,
+      });
+    }
+  }
+  const scored = scoreCorpus(hits, (h) => h.text, query);
+  return scored.slice(0, limit);
 }
 
 /** Format retrieved chunks into a compact reference block for the prompt. */
