@@ -2,6 +2,15 @@
 
 ## 2026-09-09
 
+- chore: wire App Store metadata into eas store.config (41df734)
+- chore(graphify): refresh knowledge graph artifacts [skip ci] (85b45d7)
+- chore(gitnexus): refresh architecture findings [skip ci] (f205cb4)
+- docs: add App Store listing kit (ASO metadata) (ab61ae9)
+- chore(graphify): refresh knowledge graph artifacts [skip ci] (65c1e69)
+
+
+## 2026-09-09
+
 - docs: add in-app search screenshots (3f32a28)
 - chore(gitnexus): refresh architecture findings [skip ci] (d2c1905)
 - chore(graphify): refresh knowledge graph artifacts [skip ci] (99f7338)
