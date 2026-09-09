@@ -73,6 +73,21 @@ export async function resolveLlmConfigById(studentId: string): Promise<LlmConfig
   return resolveLlmConfig(student);
 }
 
+/**
+ * Returns true when a failure is caused by the provider not being set up yet
+ * (missing OpenRouter API key, or on-device model not downloaded), as opposed
+ * to a genuine runtime/network error. Used to fall back to preview mode.
+ */
+export function isProviderUnavailable(err: unknown): boolean {
+  const msg = err instanceof Error ? err.message : String(err);
+  return (
+    msg.includes("API key") ||
+    msg.includes("OpenRouter API key") ||
+    msg.includes("not downloaded") ||
+    msg.includes("No model")
+  );
+}
+
 // ---------- Inference helpers ----------
 
 /** Stream a free-form chat response, yielding text chunks. */

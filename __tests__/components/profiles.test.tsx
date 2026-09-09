@@ -9,6 +9,9 @@ jest.mock("expo-router", () => ({
 jest.mock("@/lib/session", () => ({
   setActiveStudentId: jest.fn().mockResolvedValue(undefined),
 }));
+jest.mock("@/lib/setup", () => ({
+  needsSetup: jest.fn().mockResolvedValue(false),
+}));
 jest.mock("@/db", () => ({ db: {} }));
 jest.mock("@/lib/data", () => ({
   listStudents: jest.fn(),

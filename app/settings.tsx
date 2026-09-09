@@ -31,6 +31,7 @@ import {
   cancelDailyReminder,
   getReminderSettings,
 } from "@/lib/notify";
+import { hasCloudConsent, grantCloudConsent } from "@/lib/setup";
 import {
   ON_DEVICE_MODELS,
   isModelDownloaded,
@@ -79,6 +80,7 @@ export default function SettingsScreen() {
   const [biometricEnabled, setBiometricEnabled] = useState(false);
   const [reminderEnabled, setReminderEnabled] = useState(false);
   const [reminderHour, setReminderHour] = useState(8);
+  const [cloudConsent, setCloudConsent] = useState(false);
 
   const refreshDownloadedStatus = useCallback(async () => {
     const statuses: Record<string, boolean> = {};
@@ -113,6 +115,7 @@ export default function SettingsScreen() {
       const { enabled, hour } = await getReminderSettings();
       setReminderEnabled(enabled);
       setReminderHour(hour);
+      setCloudConsent(await hasCloudConsent(id));
     })();
   }, [router]);
 
@@ -126,6 +129,10 @@ export default function SettingsScreen() {
 
   async function validateAndSave() {
     if (!studentId) return;
+    if (!cloudConsent) {
+      setKeyError("Please consent to cloud processing below first — your prompts and answers are sent to OpenRouter.");
+      return;
+    }
     const key = keyInput.trim();
     if (!key) { setKeyError("Please enter an API key."); return; }
     setKeyStatus("validating");
@@ -247,6 +254,12 @@ export default function SettingsScreen() {
       await cancelDailyReminder();
       setReminderEnabled(false);
     }
+  }
+
+  async function handleCloudConsentToggle() {
+    const enabled = !cloudConsent;
+    setCloudConsent(enabled);
+    if (enabled && studentId) await grantCloudConsent(studentId);
   }
 
   async function adjustHour(delta: number) {
@@ -472,6 +485,27 @@ export default function SettingsScreen() {
             })}
           </>
         )}
+
+        {/* ── Privacy ── */}
+        <Text style={styles.sectionTitle}>Privacy &amp; Data</Text>
+        <View style={styles.toggleRow}>
+          <View style={styles.toggleInfo}>
+            <Text style={styles.toggleLabel}>Cloud processing consent</Text>
+            <Text style={styles.toggleDesc}>Allow prompts and answers to be sent to OpenRouter in Cloud mode</Text>
+          </View>
+          <TouchableOpacity
+            style={[styles.toggle, cloudConsent && styles.toggleOn]}
+            onPress={handleCloudConsentToggle}
+            testID="cloud-consent-toggle"
+            accessibilityRole="switch"
+            accessibilityState={{ checked: cloudConsent }}
+          >
+            <View style={[styles.toggleThumb, cloudConsent && styles.toggleThumbOn]} />
+          </TouchableOpacity>
+        </View>
+        <TouchableOpacity style={styles.privacyLink} onPress={() => router.push("/privacy")} testID="privacy-link">
+          <Text style={styles.privacyLinkText}>View our privacy &amp; AI disclosure</Text>
+        </TouchableOpacity>
 
         {/* ── Security ── */}
         <Text style={styles.sectionTitle}>Security</Text>
@@ -751,4 +785,9 @@ const styles = StyleSheet.create({
   },
   timeBtnText: { fontSize: 20, fontWeight: "600", color: "#374151" },
   timeDisplay: { fontSize: 16, fontWeight: "600", color: "#111", minWidth: 80, textAlign: "center" },
+  privacyLink: {
+    paddingVertical: 6,
+    marginBottom: 4,
+  },
+  privacyLinkText: { fontSize: 14, color: "#6366f1", fontWeight: "500" },
 });

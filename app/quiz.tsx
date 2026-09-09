@@ -14,7 +14,8 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter, useLocalSearchParams } from "expo-router";
 import { getActiveStudentId } from "@/lib/session";
 import { getStudent, getSubject, getTopic, getMastery as getMasteryRow, getTopicSubtopics } from "@/lib/data";
-import { resolveLlmConfigById, type LlmConfig } from "@/lib/llm";
+import { resolveLlmConfigById, isProviderUnavailable, type LlmConfig } from "@/lib/llm";
+import { previewQuiz, previewGradeAnswer } from "@/lib/preview";
 import { generateQuizQuestion } from "@/lib/quiz-gen";
 import { gradeAnswer } from "@/lib/grader";
 import { applyGrade, type ApplyGradeResult } from "@/lib/adaptive";
@@ -56,26 +57,39 @@ export default function QuizScreen() {
   const [applyResult, setApplyResult] = useState<ApplyGradeResult | null>(null);
   const [gamifyResult, setGamifyResult] = useState<GamifyResult | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [previewMode, setPreviewMode] = useState(false);
 
   async function startSession(id: string) {
     setPhase("init");
     setError(null);
     setResults([]);
     setRound(0);
+    setPreviewMode(false);
     try {
-      const c = await resolveLlmConfigById(id);
-      setCfg(c);
       const t = getTopic(topicId as string);
       const subs = t ? getTopicSubtopics(t) : [];
       setSubtopics(subs);
       const focus = subs.length > 0 ? subs[0] : undefined;
-      const q = await generateQuizQuestion({
-        studentId: id,
-        subjectId: subjectId as string,
-        topicId: topicId as string,
-        cfg: c,
-        focus,
-      });
+      let q: QuizQuestion;
+      try {
+        const c = await resolveLlmConfigById(id);
+        setCfg(c);
+        q = await generateQuizQuestion({
+          studentId: id,
+          subjectId: subjectId as string,
+          topicId: topicId as string,
+          cfg: c,
+          focus,
+        });
+      } catch (e) {
+        if (isProviderUnavailable(e)) {
+          setCfg(null);
+          setPreviewMode(true);
+          q = previewQuiz();
+        } else {
+          throw e;
+        }
+      }
       setQuestion(q);
       setPhase("answering");
     } catch (e) {
@@ -97,18 +111,23 @@ export default function QuizScreen() {
   }, []);
 
   async function submitAnswer() {
-    if (!student || !question || !answer.trim() || !cfg) return;
+    if (!student || !question || !answer.trim()) return;
     setPhase("grading");
     try {
       const focus = subtopics.length > 0 ? subtopics[round % subtopics.length] : undefined;
-      const g = await gradeAnswer({
-        studentId: student.id,
-        subjectId: subjectId as string,
-        topicId: topicId as string,
-        question,
-        studentAnswer: answer,
-        cfg,
-      });
+      let g: Grade;
+      if (previewMode || !cfg) {
+        g = previewGradeAnswer(question, answer);
+      } else {
+        g = await gradeAnswer({
+          studentId: student.id,
+          subjectId: subjectId as string,
+          topicId: topicId as string,
+          question,
+          studentAnswer: answer,
+          cfg,
+        });
+      }
       setGrade(g);
       // Capture mastery before applying the grade so we can detect a threshold crossing.
       const masteryBefore = getMasteryRow(student.id, topicId as string)?.mastery ?? 0;
@@ -134,7 +153,7 @@ export default function QuizScreen() {
   }
 
   async function nextQuestion() {
-    if (!student || !cfg) return;
+    if (!student) return;
     const next = round + 1;
     setRound(next);
     setAnswer("");
@@ -142,13 +161,18 @@ export default function QuizScreen() {
     setPhase("answering");
     try {
       const focus = subtopics.length > 0 ? subtopics[next % subtopics.length] : undefined;
-      const q = await generateQuizQuestion({
-        studentId: student.id,
-        subjectId: subjectId as string,
-        topicId: topicId as string,
-        cfg,
-        focus,
-      });
+      let q: QuizQuestion;
+      if (previewMode || !cfg) {
+        q = previewQuiz();
+      } else {
+        q = await generateQuizQuestion({
+          studentId: student.id,
+          subjectId: subjectId as string,
+          topicId: topicId as string,
+          cfg,
+          focus,
+        });
+      }
       setQuestion(q);
     } catch (e) {
       setError(String(e));
@@ -205,6 +229,12 @@ export default function QuizScreen() {
               <Text style={styles.roundPillText}>
                 Question {round + 1} of {ROUNDS}
               </Text>
+            </View>
+          )}
+
+          {previewMode && (
+            <View style={styles.previewTag} testID="preview-tag">
+              <Text style={styles.previewTagText}>Preview questions — answers are graded locally</Text>
             </View>
           )}
 
@@ -408,6 +438,15 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   roundPillText: { fontSize: 12, color: "#6366f1", fontWeight: "600" },
+  previewTag: {
+    alignSelf: "flex-start",
+    backgroundColor: "#fef9c3",
+    borderRadius: 8,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    marginBottom: 16,
+  },
+  previewTagText: { fontSize: 12, color: "#78350f" },
   summaryCard: {
     backgroundColor: "#f9fafb",
     borderRadius: 14,

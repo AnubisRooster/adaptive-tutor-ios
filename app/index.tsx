@@ -14,6 +14,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 import { listStudents, createStudent, verifyPin } from "@/lib/data";
 import { setActiveStudentId } from "@/lib/session";
+import { needsSetup } from "@/lib/setup";
 import ProfileAvatar from "@/components/ProfileAvatar";
 import type { Student } from "@/db/schema";
 
@@ -60,7 +61,7 @@ export default function ProfilesScreen() {
     setPinInput("");
     setPinError(null);
     await setActiveStudentId(student.id);
-    router.replace("/learn");
+    router.replace((await needsSetup(student.id)) ? "/setup" : "/learn");
   }
 
   async function handleCreate() {

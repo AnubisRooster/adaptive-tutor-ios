@@ -34,7 +34,8 @@ import {
   updateStudentOndeviceModel,
 } from "@/lib/data";
 import { buildTutorTurn } from "@/lib/orchestrator";
-import { resolveLlmConfigById, streamChat } from "@/lib/llm";
+import { resolveLlmConfigById, streamChat, isProviderUnavailable } from "@/lib/llm";
+import { previewTutorTurn } from "@/lib/preview";
 import { recommendStartTopic } from "@/lib/adaptive";
 import { fetchModelCatalog, type OpenRouterModel } from "@/lib/openrouter";
 import { ON_DEVICE_MODELS, isModelDownloaded } from "@/lib/ondevice";
@@ -69,6 +70,7 @@ export default function LearnScreen() {
   const [busy, setBusy] = useState(false);
   const [navOpen, setNavOpen] = useState(false);
   const [keyError, setKeyError] = useState<string | null>(null);
+  const [previewMode, setPreviewMode] = useState(false);
   const scrollRef = useRef<ScrollView>(null);
 
   // Model picker
@@ -284,14 +286,28 @@ export default function LearnScreen() {
         awardForTeach(student.id);
         markNextTaught();
       }
+      setPreviewMode(false);
     } catch (e) {
-      const msg = String(e);
-      if (msg.includes("No OpenRouter API key")) {
-        setKeyError("No API key set. Go to Settings to add your OpenRouter key.");
+      if (isProviderUnavailable(e)) {
+        // No model connected yet — fall back to deterministic preview mode.
+        const preview = previewTutorTurn({
+          topicName: topic?.name ?? "this topic",
+          subjectName: subject?.name ?? "this subject",
+          mode,
+          userText,
+          historyLength: history.length,
+        });
+        updateLastAssistant(preview);
+        setPreviewMode(true);
+        if (userText) {
+          const session = getOrCreateSession(student.id, subjectId);
+          addMessage({ sessionId: session.id, studentId: student.id, role: "user", content: userText, topicId });
+          addMessage({ sessionId: session.id, studentId: student.id, role: "assistant", content: preview, topicId });
+        }
+      } else {
+        setKeyError("Something went wrong — please try again.");
         updateLastAssistant("");
         setMessages((prev) => prev.filter((m) => !(m.role === "assistant" && m.content === "")));
-      } else {
-        updateLastAssistant("Something went wrong — please try again.");
       }
     } finally {
       setBusy(false);
@@ -371,6 +387,18 @@ export default function LearnScreen() {
           onPress={() => router.push("/settings")}
         >
           <Text style={styles.keyErrorText}>{keyError} Tap to fix.</Text>
+        </TouchableOpacity>
+      )}
+
+      {previewMode && (
+        <TouchableOpacity
+          style={styles.previewBanner}
+          onPress={() => router.push("/setup")}
+          testID="preview-mode-bar"
+        >
+          <Text style={styles.previewBannerText}>
+            Preview mode — connect an AI model for full tutoring. Tap here to set up.
+          </Text>
         </TouchableOpacity>
       )}
 
@@ -745,6 +773,15 @@ const styles = StyleSheet.create({
     borderColor: "#fecaca",
   },
   keyErrorText: { color: "#ef4444", fontSize: 13 },
+  // Preview mode
+  previewBanner: {
+    backgroundColor: "#fef9c3",
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderBottomWidth: 1,
+    borderColor: "#fde68a",
+  },
+  previewBannerText: { color: "#78350f", fontSize: 12 },
   // Topic bar
   topicBar: {
     flexDirection: "row",

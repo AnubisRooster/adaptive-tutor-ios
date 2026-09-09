@@ -43,6 +43,9 @@ jest.mock("@/lib/orchestrator", () => ({
 jest.mock("@/lib/llm", () => ({
   resolveLlmConfigById: jest.fn(),
   streamChat: jest.fn(),
+  isProviderUnavailable: jest.fn(
+    (err: unknown) => err instanceof Error && err.message.includes("key")
+  ),
 }));
 jest.mock("@/lib/adaptive", () => ({
   recommendStartTopic: jest.fn().mockReturnValue(null),
@@ -107,11 +110,13 @@ describe("LearnScreen", () => {
     await findByText(/Hello from the tutor!/);
   });
 
-  it("shows API key error banner when no key is set", async () => {
+  it("falls back to preview mode when no provider is set up", async () => {
     mockResolve.mockRejectedValue(new Error("No OpenRouter API key found. Go to Settings and enter your key."));
-    const { findByText } = await render(<LearnScreen />);
+    const { findByText, findByTestId, findAllByText } = await render(<LearnScreen />);
     const btn = await findByText("Teach me");
     await fireEvent.press(btn);
-    await waitFor(() => findByText(/No API key set/), { timeout: 3000 });
+    await findByTestId("preview-mode-bar");
+    const matches = await findAllByText(/preview mode/i);
+    expect(matches.length).toBeGreaterThan(0);
   });
 });

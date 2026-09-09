@@ -27,6 +27,9 @@ jest.mock("@/lib/data", () => ({
 }));
 jest.mock("@/lib/llm", () => ({
   resolveLlmConfigById: jest.fn().mockResolvedValue({ provider: "openrouter", model: "test", apiKey: "sk-test" }),
+  isProviderUnavailable: jest.fn(
+    (err: unknown) => err instanceof Error && err.message.includes("key")
+  ),
 }));
 jest.mock("@/lib/quiz-gen", () => ({
   generateQuizQuestion: jest.fn(),
@@ -47,11 +50,13 @@ import { generateQuizQuestion } from "@/lib/quiz-gen";
 import { gradeAnswer } from "@/lib/grader";
 import { applyGrade } from "@/lib/adaptive";
 import { awardForGrade } from "@/lib/gamify";
+import { resolveLlmConfigById } from "@/lib/llm";
 
 const mockGenerate = generateQuizQuestion as jest.Mock;
 const mockGrade = gradeAnswer as jest.Mock;
 const mockApply = applyGrade as jest.Mock;
 const mockAward = awardForGrade as jest.Mock;
+const mockResolve = resolveLlmConfigById as jest.Mock;
 
 const QUESTION = {
   question: "What is justified true belief?",
@@ -173,5 +178,12 @@ describe("QuizScreen", () => {
     mockGenerate.mockRejectedValueOnce(new Error("LLM unavailable"));
     const { findByTestId } = await render(<QuizScreen />);
     await findByTestId("phase-error");
+  });
+
+  it("starts a preview question when no model is configured", async () => {
+    mockResolve.mockRejectedValueOnce(new Error("No OpenRouter API key found. Go to Settings and enter your key."));
+    const { findByText, findByTestId } = await render(<QuizScreen />);
+    await findByTestId("preview-tag");
+    await findByText(/What is the core idea behind active recall/);
   });
 });

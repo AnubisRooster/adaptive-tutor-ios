@@ -14,6 +14,10 @@ jest.mock("@/lib/key-store", () => ({
   setApiKey: jest.fn().mockResolvedValue(undefined),
   deleteApiKey: jest.fn().mockResolvedValue(undefined),
 }));
+jest.mock("@/lib/setup", () => ({
+  hasCloudConsent: jest.fn().mockResolvedValue(true),
+  grantCloudConsent: jest.fn().mockResolvedValue(undefined),
+}));
 jest.mock("@/lib/openrouter", () => ({
   validateApiKey: jest.fn().mockResolvedValue(true),
   fetchModelCatalog: jest.fn().mockResolvedValue([]),
@@ -57,15 +61,18 @@ jest.mock("@/db", () => ({ db: {} }));
 
 import { validateApiKey, fetchModelCatalog, rankModels } from "@/lib/openrouter";
 import { getApiKey, setApiKey } from "@/lib/key-store";
+import { hasCloudConsent } from "@/lib/setup";
 
 const mockValidate = validateApiKey as jest.Mock;
 const mockGetKey = getApiKey as jest.Mock;
 const mockSetKey = setApiKey as jest.Mock;
+const mockHasConsent = hasCloudConsent as jest.Mock;
 
 beforeEach(() => {
   mockValidate.mockResolvedValue(true);
   mockGetKey.mockResolvedValue(null);
   mockSetKey.mockResolvedValue(undefined);
+  mockHasConsent.mockResolvedValue(true);
   (fetchModelCatalog as jest.Mock).mockResolvedValue([]);
   (rankModels as jest.Mock).mockReturnValue([]);
 });
@@ -114,5 +121,16 @@ describe("SettingsScreen", () => {
     const btn = await findByText("Validate & Save");
     await fireEvent.press(btn);
     await findByText(/Key rejected by OpenRouter/);
+  });
+
+  it("requires cloud consent before saving a key", async () => {
+    mockValidate.mockClear();
+    mockHasConsent.mockResolvedValue(false);
+    const { findByPlaceholderText, findByText } = await render(<SettingsScreen />);
+    const input = await findByPlaceholderText("sk-or-v1-...");
+    await fireEvent.changeText(input, "sk-or-v1-test-key-12345678");
+    await fireEvent.press(await findByText("Validate & Save"));
+    await findByText(/consent to cloud processing/i);
+    expect(mockValidate).not.toHaveBeenCalled();
   });
 });
