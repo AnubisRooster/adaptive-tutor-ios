@@ -6,7 +6,7 @@ _Auto-generated from the GitNexus knowledge graph on every push to `main`. Do no
 
 | nodes | edges |
 | ----- | ----- |
-| 1046 | 1499 |
+| 1050 | 1503 |
 
 ## God nodes (highest out-degree, tests excluded)
 
@@ -15,8 +15,8 @@ _Auto-generated from the GitNexus knowledge graph on every push to `main`. Do no
 | data.ts | lib/data.ts | 145 |
 | gamify.ts | lib/gamify.ts | 55 |
 | openrouter.ts | lib/openrouter.ts | 45 |
+| Communities (41 total, 4 thin omitted) | docs/graphify/GRAPH_REPORT.md | 34 |
 | adaptive.ts | lib/adaptive.ts | 32 |
-| Communities (37 total, 4 thin omitted) | docs/graphify/GRAPH_REPORT.md | 30 |
 | ondevice.ts | lib/ondevice.ts | 30 |
 | lib | lib | 29 |
 | learn.tsx | app/learn.tsx | 26 |
