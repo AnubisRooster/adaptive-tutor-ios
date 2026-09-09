@@ -2,6 +2,13 @@
 
 ## 2026-09-09
 
+- docs: add privacy policy pages for GitHub Pages; wire store URLs (3399367)
+- chore(gitnexus): refresh architecture findings [skip ci] (e69db4c)
+- chore(graphify): refresh knowledge graph artifacts [skip ci] (21c79f4)
+
+
+## 2026-09-09
+
 - chore: wire App Store metadata into eas store.config (41df734)
 - chore(graphify): refresh knowledge graph artifacts [skip ci] (85b45d7)
 - chore(gitnexus): refresh architecture findings [skip ci] (f205cb4)
