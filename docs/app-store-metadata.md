@@ -8,6 +8,9 @@ edited after approval until the first release goes live.
 - Category: **Education** · Secondary: none
 - Language: English (US)
 - Price: Free (no IAP, no ads)
+- **Synced source of truth:** all copy + age rating + review info live in
+  [`store.config.json`](../store.config.json) (EAS Metadata schema). Edit that file, then run
+  `npm run metadata:push`. The dashboard fields documented below mirror it.
 
 ## Subtitle (30 chars max)
 
@@ -63,6 +66,21 @@ PRIVATE BY DESIGN
 SELECTED FOR
 Anyone 13+ who wants a focused, judgmental-free study partner for Philosophy, Psychology, AI, Physics, Coding, Biology, Chemistry, and more.
 ```
+
+## Placeholders to replace before `eas metadata:push`
+
+`store.config.json` ships with working copy but placeholder contact/URL fields — EAS validation
+won't flag them, Apple's review team or a missing page will:
+
+- `apple.review.firstName` / `lastName` — real App Store Connect contact.
+- `apple.review.email` — reachable inbox (currently `privacy@adaptivetutor.example`).
+- `apple.review.phone` — real formatted phone (`+1 …`).
+- `apple.info.en-US.marketingUrl` / `supportUrl` / `privacyPolicyUrl` / `privacyChoicesUrl` —
+  these point at `adaptivetutor.example`. A privacy policy URL is **required** for all apps;
+  publish a real page before pushing.
+
+`npm run metadata:push` also needs an App Store Connect API key (`eas init`/`eas credentials` +
+ASC key) and the build already created in App Store Connect.
 
 ## App Preview / demo notes
 

@@ -47,6 +47,8 @@
     "test": "jest",
     "test:watch": "jest --watch",
     "typecheck": "tsc --noEmit",
+    "metadata:push": "eas metadata:push",
+    "metadata:pull": "eas metadata:pull",
     "lint": "eslint .",
     "format": "prettier --write ."
   },
