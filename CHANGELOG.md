@@ -1,5 +1,12 @@
 # Changelog
 
+## 2026-09-09
+
+- feat: on-device first-run setup, preview mode, privacy disclosure (9221610)
+- chore(gitnexus): refresh architecture findings [skip ci] (d96c930)
+- chore(graphify): refresh knowledge graph artifacts [skip ci] (89c243a)
+
+
 ## 2026-09-08
 
 - feat: progressive lessons + multi-question quiz sessions (60462f8)
