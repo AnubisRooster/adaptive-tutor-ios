@@ -16,6 +16,7 @@ Built with **Expo / React Native** as a modern, local-first rewrite of the
 | ![Quiz](assets/screenshots/07-quiz.png) | ![Quiz result](assets/screenshots/08-quiz-result.png) |
 | ![Session summary](assets/screenshots/09-quiz-summary.png) | ![Progress](assets/screenshots/10-progress.png) |
 | ![Settings](assets/screenshots/11-settings.png) | ![Privacy & AI disclosure](assets/screenshots/12-privacy.png) |
+| ![Search (empty library)](assets/screenshots/13-search-empty.png) | ![Search results](assets/screenshots/14-search-results.png) |
 
 Captured on the iOS Simulator (iPhone, iOS 26).
 
