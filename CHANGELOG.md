@@ -2,6 +2,13 @@
 
 ## 2026-09-09
 
+- feat: in-app search over all saved sources (BM25) (1504c3f)
+- chore(gitnexus): refresh architecture findings [skip ci] (aeabaab)
+- chore(graphify): refresh knowledge graph artifacts [skip ci] (5556c82)
+
+
+## 2026-09-09
+
 - docs: add local-first architecture + screenshots to README (398516f)
 - chore(gitnexus): refresh architecture findings [skip ci] (4c3a473)
 - chore(graphify): refresh knowledge graph artifacts [skip ci] (0d4abe6)
