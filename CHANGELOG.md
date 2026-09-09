@@ -2,6 +2,13 @@
 
 ## 2026-09-09
 
+- docs: add local-first architecture + screenshots to README (398516f)
+- chore(gitnexus): refresh architecture findings [skip ci] (4c3a473)
+- chore(graphify): refresh knowledge graph artifacts [skip ci] (0d4abe6)
+
+
+## 2026-09-09
+
 - feat: on-device first-run setup, preview mode, privacy disclosure (9221610)
 - chore(gitnexus): refresh architecture findings [skip ci] (d96c930)
 - chore(graphify): refresh knowledge graph artifacts [skip ci] (89c243a)
