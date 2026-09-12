@@ -56,7 +56,14 @@
       "./plugins/withoutPushEntitlement",
       "expo-notifications",
       "./plugins/withoutScriptSandboxing",
-      "./plugins/withReleaseRunScheme"
+      "./plugins/withReleaseRunScheme",
+      [
+        "expo-speech-recognition",
+        {
+          "microphonePermission": "Adaptive Tutor uses the microphone to listen to your spoken questions.",
+          "speechRecognitionPermission": "Adaptive Tutor uses speech recognition to turn your voice into text for your tutor."
+        }
+      ]
     ]
   }
 }

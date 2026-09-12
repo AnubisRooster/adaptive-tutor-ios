@@ -396,6 +396,17 @@ export default function LearnScreen() {
         >
           <Text style={styles.searchIcon}>🔍</Text>
         </TouchableOpacity>
+        <TouchableOpacity
+          style={styles.micBtn}
+          onPress={() =>
+            router.push({ pathname: "/voice", params: { subjectId, topicId } })
+          }
+          testID="voice-btn"
+          accessibilityRole="button"
+          accessibilityLabel="Talk to your tutor"
+        >
+          <Text style={styles.micIcon}>🎙️</Text>
+        </TouchableOpacity>
         <TouchableOpacity style={styles.switchBtn} onPress={switchProfile}>
           <Text style={styles.switchBtnText}>Switch</Text>
         </TouchableOpacity>
@@ -790,6 +801,8 @@ const styles = StyleSheet.create({
   avatarBtn: { padding: 2 },
   searchBtn: { padding: 4 },
   searchIcon: { fontSize: 16 },
+  micBtn: { padding: 4 },
+  micIcon: { fontSize: 16 },
   switchBtn: {
     paddingHorizontal: 10,
     paddingVertical: 5,

@@ -13,6 +13,7 @@ const student: Student = {
   llmProvider: "openrouter",
   openrouterModel: null,
   ondeviceModel: null,
+  voiceSpeakReplies: false,
   xp: 0,
   streakCount: 0,
   streakLastDay: null,

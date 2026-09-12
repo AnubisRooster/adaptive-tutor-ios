@@ -77,6 +77,7 @@ export function createStudent(input: {
     llmProvider: "on-device",
     openrouterModel: null,
     ondeviceModel: "llama-3.2-3b-q4",
+    voiceSpeakReplies: false,
     xp: 0,
     streakCount: 0,
     streakLastDay: null,
@@ -126,6 +127,10 @@ export function updateStudentPrefs(
 ): void {
   if (Object.keys(prefs).length === 0) return;
   db.update(students).set(prefs).where(eq(students.id, studentId)).run();
+}
+
+export function updateStudentSpeakReplies(studentId: string, enabled: boolean): void {
+  db.update(students).set({ voiceSpeakReplies: enabled }).where(eq(students.id, studentId)).run();
 }
 
 // ---------- Gamification ----------

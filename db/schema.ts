@@ -20,6 +20,10 @@ export const students = sqliteTable("students", {
   llmProvider: text("llm_provider").notNull().default("openrouter"),
   openrouterModel: text("openrouter_model"),
   ondeviceModel: text("ondevice_model"),
+  // Voice mode: read the tutor's replies aloud (defaults to off).
+  voiceSpeakReplies: integer("voice_speak_replies", { mode: "boolean" })
+    .notNull()
+    .default(false),
   // Gamification
   xp: integer("xp").notNull().default(0),
   streakCount: integer("streak_count").notNull().default(0),

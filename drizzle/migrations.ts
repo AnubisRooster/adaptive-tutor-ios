@@ -130,15 +130,20 @@ CREATE INDEX \`topics_by_subject\` ON \`topics\` (\`subject_id\`);`;
 // Migration 0001: add on-device model column to students table.
 const sql1 = `ALTER TABLE \`students\` ADD \`ondevice_model\` text;`;
 
+// Migration 0002: add voice reply preference column to students table.
+const sql2 = `ALTER TABLE \`students\` ADD \`voice_speak_replies\` integer DEFAULT false NOT NULL;`;
+
 export default {
   journal: {
     entries: [
       { idx: 0, when: 1781635755984, tag: "0000_pink_odin", breakpoints: true },
       { idx: 1, when: 1781635800000, tag: "0001_ondevice_model", breakpoints: true },
+      { idx: 2, when: 1789200000000, tag: "0002_voice_speak_replies", breakpoints: true },
     ],
   },
   migrations: {
     m0000: sql0,
     m0001: sql1,
+    m0002: sql2,
   },
 };

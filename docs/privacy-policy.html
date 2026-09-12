@@ -25,7 +25,7 @@
 <body>
 <main>
   <h1>Adaptive Tutor Privacy Policy</h1>
-  <p class="muted">Effective date: September 9, 2026</p>
+  <p class="muted">Effective date: September 12, 2026</p>
 
   <div class="tldr">
     <p><strong>In one line:</strong> Adaptive Tutor is a private, local-first study app. By default everything you
@@ -54,6 +54,9 @@
     requests you make to OpenRouter directly from the App.</li>
     <li><strong>Study reminders.</strong> If you enable reminders, the schedule is stored locally and notifications
     are generated on your device. Push notifications are not used.</li>
+    <li><strong>Spoken questions.</strong> Voice mode uses your device's speech recognizer (Siri on iOS) to turn your
+    spoken question into text on-device. Audio is not recorded or uploaded; only the resulting text is used, exactly
+    as if you typed it.</li>
   </ul>
 
   <h2>3. Information collected automatically</h2>
@@ -66,6 +69,13 @@
   <p>By default the App runs entirely on your device using a downloaded AI model (built on llama.cpp with the Metal
   GPU backend). In On-Device mode <strong>nothing you type, ask, or learn is sent over the network</strong>. Lessons,
   quizzes, and grades are generated locally, and all data remains in the App's local database and secure storage.</p>
+
+  <h2>4a. Voice mode</h2>
+  <p>Voice mode lets you talk to the tutor instead of typing. Your spoken question is transcribed to text on your
+  device using the platform's speech recognizer (Siri on iOS). The resulting text then flows through the exact same
+  pipeline as a typed question — the LLM provider you selected (On-Device or Cloud/OpenRouter). If you enable
+  <em>Speak replies</em> in Settings, the tutor's answer is read aloud on your device. Voice audio is never recorded,
+  uploaded, or sent anywhere by the App, and <strong>no voice data leaves your device</strong>.</p>
 
   <h2>5. Cloud mode (optional, bring-your-own-key)</h2>
   <p>Cloud mode is optional and is never assumed. When you switch the LLM provider to OpenRouter in Settings, the App

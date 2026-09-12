@@ -49,6 +49,16 @@ export default function PrivacyScreen() {
           never transmits it unless you explicitly enable Cloud mode with your own key.
         </Text>
 
+        <Text style={styles.sectionTitle}>Voice mode</Text>
+        <Text style={styles.body} testID="privacy-voice">
+          Voice mode converts your spoken question into text on this device using the platform&apos;s
+          speech recognizer (Siri on iOS), then runs the same tutor pipeline you use when typing
+          (the LLM provider you selected — on-device or OpenRouter). If you enable “Speak
+          replies”, the tutor&apos;s answer is read aloud on the device. Voice audio is not recorded
+          or uploaded by Adaptive Tutor: it is transcribed locally and only the resulting text is
+          used, exactly like a typed question.
+        </Text>
+
         <Text style={styles.sectionTitle}>Your data &amp; deletion</Text>
         <Text style={styles.body}>
           Deleting a profile in the app removes its locally stored messages, progress, and settings.

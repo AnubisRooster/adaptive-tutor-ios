@@ -23,17 +23,23 @@ jest.mock("@/lib/openrouter", () => ({
   fetchModelCatalog: jest.fn().mockResolvedValue([]),
   rankModels: jest.fn().mockReturnValue([]),
 }));
+let mockSpeakRepliesDb = false;
+
 jest.mock("@/lib/data", () => ({
   getStudent: jest.fn().mockReturnValue({
     id: "stu-1", name: "Alice", openrouterModel: null, ondeviceModel: null,
     color: "#6366f1", pinHash: null, isAdmin: false, pacePref: "normal",
     tonePref: "encouraging", themePref: "system", llmProvider: "openrouter",
+    get voiceSpeakReplies() { return mockSpeakRepliesDb; },
     xp: 0, streakCount: 0, streakLastDay: null, shareStats: false,
     createdAt: 0, lastActiveAt: 0,
   }),
   updateStudentModel: jest.fn(),
   updateStudentProvider: jest.fn(),
   updateStudentOndeviceModel: jest.fn(),
+  updateStudentSpeakReplies: jest.fn((_id: string, enabled: boolean) => {
+    mockSpeakRepliesDb = enabled;
+  }),
 }));
 jest.mock("@/lib/ondevice", () => ({
   ON_DEVICE_MODELS: [
@@ -62,17 +68,21 @@ jest.mock("@/db", () => ({ db: {} }));
 import { validateApiKey, fetchModelCatalog, rankModels } from "@/lib/openrouter";
 import { getApiKey, setApiKey } from "@/lib/key-store";
 import { hasCloudConsent } from "@/lib/setup";
+import { updateStudentSpeakReplies } from "@/lib/data";
 
 const mockValidate = validateApiKey as jest.Mock;
 const mockGetKey = getApiKey as jest.Mock;
 const mockSetKey = setApiKey as jest.Mock;
 const mockHasConsent = hasCloudConsent as jest.Mock;
+const mockUpdateSpeakReplies = updateStudentSpeakReplies as jest.Mock;
 
 beforeEach(() => {
   mockValidate.mockResolvedValue(true);
   mockGetKey.mockResolvedValue(null);
   mockSetKey.mockResolvedValue(undefined);
   mockHasConsent.mockResolvedValue(true);
+  mockUpdateSpeakReplies.mockClear();
+  mockSpeakRepliesDb = false;
   (fetchModelCatalog as jest.Mock).mockResolvedValue([]);
   (rankModels as jest.Mock).mockReturnValue([]);
 });
@@ -132,5 +142,15 @@ describe("SettingsScreen", () => {
     await fireEvent.press(await findByText("Validate & Save"));
     await findByText(/consent to cloud processing/i);
     expect(mockValidate).not.toHaveBeenCalled();
+  });
+
+  it("toggles Speak replies and persists the preference", async () => {
+    const { findByTestId } = await render(<SettingsScreen />);
+    const toggle = await findByTestId("speak-replies-toggle");
+    await fireEvent.press(toggle);
+    expect(mockUpdateSpeakReplies).toHaveBeenCalledWith("stu-1", true);
+    const toggleOn = await findByTestId("speak-replies-toggle");
+    await fireEvent.press(toggleOn);
+    expect(mockUpdateSpeakReplies).toHaveBeenCalledWith("stu-1", false);
   });
 });

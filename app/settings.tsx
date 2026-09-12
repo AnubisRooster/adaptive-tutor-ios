@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import {
   View,
   Text,
@@ -18,6 +18,7 @@ import {
   updateStudentModel,
   updateStudentProvider,
   updateStudentOndeviceModel,
+  updateStudentSpeakReplies,
 } from "@/lib/data";
 import {
   isBiometricAvailable,
@@ -82,6 +83,10 @@ export default function SettingsScreen() {
   const [reminderHour, setReminderHour] = useState(8);
   const [cloudConsent, setCloudConsent] = useState(false);
 
+  // Voice
+  const [speakReplies, setSpeakReplies] = useState(false);
+  const speakRepliesRef = useRef(false);
+
   const refreshDownloadedStatus = useCallback(async () => {
     const statuses: Record<string, boolean> = {};
     for (const m of ON_DEVICE_MODELS) {
@@ -102,6 +107,8 @@ export default function SettingsScreen() {
         setProvider((student.llmProvider ?? "openrouter") as "openrouter" | "on-device");
         setSelectedModel(student.openrouterModel ?? "google/gemma-3-27b-it:free");
         setSelectedOndeviceModel(student.ondeviceModel ?? "llama-3.2-3b-q4");
+        setSpeakReplies(!!student.voiceSpeakReplies);
+        speakRepliesRef.current = !!student.voiceSpeakReplies;
       }
       const key = await getApiKey(id);
       setCurrentKey(key);
@@ -260,6 +267,14 @@ export default function SettingsScreen() {
     const enabled = !cloudConsent;
     setCloudConsent(enabled);
     if (enabled && studentId) await grantCloudConsent(studentId);
+  }
+
+  function handleSpeakRepliesToggle() {
+    if (!studentId) return;
+    const enabled = !speakRepliesRef.current;
+    speakRepliesRef.current = enabled;
+    setSpeakReplies(enabled);
+    updateStudentSpeakReplies(studentId, enabled);
   }
 
   async function adjustHour(delta: number) {
@@ -485,6 +500,24 @@ export default function SettingsScreen() {
             })}
           </>
         )}
+
+        {/* ── Voice ── */}
+        <Text style={styles.sectionTitle}>Voice</Text>
+        <View style={styles.toggleRow}>
+          <View style={styles.toggleInfo}>
+            <Text style={styles.toggleLabel}>Speak replies</Text>
+            <Text style={styles.toggleDesc}>Read the tutor&apos;s answers aloud in Voice mode</Text>
+          </View>
+          <TouchableOpacity
+            style={[styles.toggle, speakReplies && styles.toggleOn]}
+            onPress={handleSpeakRepliesToggle}
+            testID="speak-replies-toggle"
+            accessibilityRole="switch"
+            accessibilityState={{ checked: speakReplies }}
+          >
+            <View style={[styles.toggleThumb, speakReplies && styles.toggleThumbOn]} />
+          </TouchableOpacity>
+        </View>
 
         {/* ── Privacy ── */}
         <Text style={styles.sectionTitle}>Privacy &amp; Data</Text>
