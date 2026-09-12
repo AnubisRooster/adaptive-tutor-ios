@@ -1,5 +1,12 @@
 # Changelog
 
+## 2026-09-12
+
+- feat: add hands-free voice tutoring with optional spoken replies (4e84bcb)
+- chore(gitnexus): refresh architecture findings [skip ci] (1b51950)
+- chore(graphify): refresh knowledge graph artifacts [skip ci] (287591a)
+
+
 ## 2026-09-09
 
 - docs: add privacy policy pages for GitHub Pages; wire store URLs (3399367)
