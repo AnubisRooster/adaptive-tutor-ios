@@ -1,12 +1,12 @@
-# Graph Report - adaptive-tutor-ios  (2026-09-28)
+# Graph Report - adaptive-tutor-ios  (2026-10-05)
 
 ## Corpus Check
-- 136 files · ~349,469 words
+- 136 files · ~349,862 words
 - Verdict: corpus is large enough that graph structure adds value.
 - Unclassified: 6 file(s) not represented in the graph (top: (none) 4, .jsonl 1, .xcscheme 1)
 
 ## Summary
-- 727 nodes · 1818 edges · 34 communities (29 shown, 5 thin omitted)
+- 727 nodes · 1818 edges · 34 communities (28 shown, 6 thin omitted)
 - Extraction: 100% EXTRACTED · 0% INFERRED · 0% AMBIGUOUS · INFERRED: 5 edges (avg confidence: 0.85)
 - Token cost: 0 input · 0 output
 
@@ -29,7 +29,6 @@
 - package.json
 - prompts.ts
 - biometric.test.ts
-- graphify_pipeline.py
 - devDependencies
 - adaptive.ts
 - adaptive.test.ts
@@ -70,7 +69,7 @@
 ## Import Cycles
 - None detected.
 
-## Communities (34 total, 5 thin omitted)
+## Communities (34 total, 6 thin omitted)
 
 ### Community 0 - "quiz.tsx"
 Cohesion: 0.06
@@ -110,7 +109,7 @@ Nodes (19): chunkText(), createSource(), insertKnowledgeChunk(), updateSource(),
 
 ### Community 9 - "openrouter.ts"
 Cohesion: 0.10
-Nodes (19): buildBody(), buildHeaders(), ChatOpts, normalizeModel(), OPENROUTER_BASE, openrouterChatOnce(), openrouterChatStream(), OpenRouterModel (+11 more)
+Nodes (17): buildBody(), buildHeaders(), ChatOpts, normalizeModel(), OPENROUTER_BASE, openrouterChatOnce(), openrouterChatStream(), OpenRouterModel (+9 more)
 
 ### Community 10 - "settings.test.tsx"
 Cohesion: 0.13
@@ -143,10 +142,6 @@ Nodes (14): bloomName(), Gap, Mastery, Subject, buildGradeMessages(), buildTutor
 ### Community 17 - "biometric.test.ts"
 Cohesion: 0.21
 Nodes (13): RootLayout(), handleUnlock(), handleBiometricToggle(), authenticateWithBiometrics(), getBiometricLockEnabled(), isBiometricAvailable(), setBiometricLockEnabled(), expo-local-authentication (+5 more)
-
-### Community 18 - "graphify_pipeline.py"
-Cohesion: 0.13
-Nodes (13): graphify_analyze, graphify_build, graphify_cluster, graphify_detect, graphify_export, graphify_extract, graphify_llm, graphify_report (+5 more)
 
 ### Community 19 - "devDependencies"
 Cohesion: 0.13
@@ -191,22 +186,22 @@ Nodes (5): jest, moduleNameMapper, preset, setupFilesAfterEnv, transformIgnorePa
 ## Knowledge Gaps
 - **269 isolated node(s):** `mockRouter`, `mockIngestUrl`, `mockReplace`, `mockPush`, `mockParams` (+264 more)
   These have ≤1 connection - possible missing edges. (Counts symbols only; 325 node(s) total have ≤1 connection when file, concept and rationale nodes are included.)
-- **5 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
+- **6 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
 
 ## Suggested Questions
 _Questions this graph is uniquely positioned to answer:_
 
 - **Why does `react` connect `learn.tsx` to `quiz.tsx`, `ingest.tsx`, `LearnScreen()`, `graph.tsx`, `settings.test.tsx`, `settings.tsx`, `setup.tsx`, `package.json`?**
   _High betweenness centrality (0.066) - this node is a cross-community bridge._
-- **Why does `dependencies` connect `dependencies` to `package.json`?**
-  _High betweenness centrality (0.053) - this node is a cross-community bridge._
-- **Why does `getStudent()` connect `quiz.tsx` to `learn.tsx`, `ingest.tsx`, `LearnScreen()`, `data.ts`, `gamify.ts`, `graph.tsx`, `settings.tsx`, `SettingsScreen()`, `setup.tsx`, `adaptive.test.ts`?**
-  _High betweenness centrality (0.037) - this node is a cross-community bridge._
 - **What connects `mockRouter`, `mockIngestUrl`, `mockReplace` to the rest of the system?**
   _269 weakly-connected nodes found - possible documentation gaps or missing edges._
 - **Should `quiz.tsx` be split into smaller, more focused modules?**
   _Cohesion score 0.05720122574055159 - nodes in this community are weakly interconnected._
+- **Why does `dependencies` connect `dependencies` to `package.json`?**
+  _High betweenness centrality (0.053) - this node is a cross-community bridge._
 - **Should `learn.tsx` be split into smaller, more focused modules?**
   _Cohesion score 0.05662862159789289 - nodes in this community are weakly interconnected._
+- **Why does `getStudent()` connect `quiz.tsx` to `learn.tsx`, `ingest.tsx`, `LearnScreen()`, `data.ts`, `gamify.ts`, `graph.tsx`, `settings.tsx`, `SettingsScreen()`, `setup.tsx`, `adaptive.test.ts`?**
+  _High betweenness centrality (0.037) - this node is a cross-community bridge._
 - **Should `ingest.tsx` be split into smaller, more focused modules?**
   _Cohesion score 0.07080200501253132 - nodes in this community are weakly interconnected._
