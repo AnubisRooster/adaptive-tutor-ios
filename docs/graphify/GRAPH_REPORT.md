@@ -1,7 +1,7 @@
-# Graph Report - adaptive-tutor-ios  (2026-10-05)
+# Graph Report - adaptive-tutor-ios  (2026-10-12)
 
 ## Corpus Check
-- 136 files · ~349,862 words
+- 136 files · ~349,887 words
 - Verdict: corpus is large enough that graph structure adds value.
 - Unclassified: 6 file(s) not represented in the graph (top: (none) 4, .jsonl 1, .xcscheme 1)
 
@@ -184,7 +184,7 @@ Cohesion: 0.40
 Nodes (5): jest, moduleNameMapper, preset, setupFilesAfterEnv, transformIgnorePatterns
 
 ## Knowledge Gaps
-- **269 isolated node(s):** `mockRouter`, `mockIngestUrl`, `mockReplace`, `mockPush`, `mockParams` (+264 more)
+- **15 isolated node(s):** `babel-preset-expo`, `expo-constants`, `expo-linking`, `react-native-screens`, `@react-native/jest-preset` (+10 more)
   These have ≤1 connection - possible missing edges. (Counts symbols only; 325 node(s) total have ≤1 connection when file, concept and rationale nodes are included.)
 - **6 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
 
@@ -193,8 +193,8 @@ _Questions this graph is uniquely positioned to answer:_
 
 - **Why does `react` connect `learn.tsx` to `quiz.tsx`, `ingest.tsx`, `LearnScreen()`, `graph.tsx`, `settings.test.tsx`, `settings.tsx`, `setup.tsx`, `package.json`?**
   _High betweenness centrality (0.066) - this node is a cross-community bridge._
-- **What connects `mockRouter`, `mockIngestUrl`, `mockReplace` to the rest of the system?**
-  _269 weakly-connected nodes found - possible documentation gaps or missing edges._
+- **What connects `babel-preset-expo`, `expo-constants`, `expo-linking` to the rest of the system?**
+  _15 weakly-connected nodes found - possible documentation gaps or missing edges._
 - **Should `quiz.tsx` be split into smaller, more focused modules?**
   _Cohesion score 0.05720122574055159 - nodes in this community are weakly interconnected._
 - **Why does `dependencies` connect `dependencies` to `package.json`?**
