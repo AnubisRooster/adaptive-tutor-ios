@@ -1,53 +1,55 @@
-# Graph Report - adaptive-tutor-ios  (2026-10-19)
+# Graph Report - adaptive-tutor-ios  (2026-10-26)
 
 ## Corpus Check
-- 136 files · ~295,938 words
+- 136 files · ~132,386 words
 - Verdict: corpus is large enough that graph structure adds value.
 - Unclassified: 6 file(s) not represented in the graph (top: (none) 4, .jsonl 1, .xcscheme 1)
 
 ## Summary
-- 727 nodes · 1818 edges · 34 communities (28 shown, 6 thin omitted)
+- 720 nodes · 1846 edges · 36 communities (31 shown, 5 thin omitted)
 - Extraction: 100% EXTRACTED · 0% INFERRED · 0% AMBIGUOUS · INFERRED: 5 edges (avg confidence: 0.85)
 - Token cost: 0 input · 0 output
 
 ## Community Hubs (Navigation)
-- quiz.tsx
 - learn.tsx
+- llm.ts
 - ingest.tsx
-- LearnScreen()
-- data.ts
 - gamify.ts
+- data.ts
+- react
+- react-native
+- search.test.tsx
 - expo
-- graph.tsx
-- ingest.test.ts
-- openrouter.ts
-- settings.test.tsx
-- settings.tsx
-- SettingsScreen()
 - setup.tsx
-- dependencies
 - package.json
-- prompts.ts
-- biometric.test.ts
-- devDependencies
+- dependencies
+- settings.test.tsx
+- voice.test.tsx
+- progress.tsx
+- settings.tsx
+- SetupScreen()
+- MarkdownText.tsx
+- graph.ts
 - adaptive.ts
-- adaptive.test.ts
 - scripts
-- getMastery()
-- subtopic-nav.ts
-- tsconfig.json
+- graph.tsx
 - updateStudentOndeviceModel()
-- eslint.config.js
-- jest
+- KnowledgeGraphView.tsx
+- notify.test.ts
+- tsconfig.json
+- adaptive.test.ts
+- subtopic-nav.ts
 - Topic
+- eslint-config-expo
+- jest
 - drizzle-kit
 
 ## God Nodes (most connected - your core abstractions)
 1. `SettingsScreen()` - 44 edges
 2. `LearnScreen()` - 42 edges
 3. `getStudent()` - 33 edges
-4. `VoiceScreen()` - 24 edges
-5. `react` - 24 edges
+4. `react` - 25 edges
+5. `VoiceScreen()` - 24 edges
 6. `getActiveStudentId()` - 23 edges
 7. `SetupScreen()` - 22 edges
 8. `resolveLlmConfigById()` - 22 edges
@@ -55,153 +57,165 @@
 10. `QuizScreen()` - 20 edges
 
 ## Surprising Connections (you probably didn't know these)
-- `openModelPicker()` --calls--> `fetchModelCatalog()`  [EXTRACTED]
-  app/learn.tsx → lib/openrouter.ts
-- `handleCloudConsentToggle()` --calls--> `grantCloudConsent()`  [EXTRACTED]
-  app/settings.tsx → lib/setup.ts
 - `RootLayout()` --calls--> `seedBuiltinCurriculum()`  [EXTRACTED]
   app/_layout.tsx → lib/seed.ts
 - `handleUnlock()` --calls--> `authenticateWithBiometrics()`  [EXTRACTED]
   app/_layout.tsx → lib/biometric.ts
 - `KnowledgeMapScreen()` --calls--> `getStudent()`  [EXTRACTED]
   app/graph.tsx → lib/data.ts
+- `KnowledgeMapScreen()` --calls--> `listSubjects()`  [EXTRACTED]
+  app/graph.tsx → lib/data.ts
+- `KnowledgeMapScreen()` --calls--> `buildTopicGraph()`  [EXTRACTED]
+  app/graph.tsx → lib/graph.ts
 
 ## Import Cycles
 - None detected.
 
-## Communities (34 total, 6 thin omitted)
+## Communities (36 total, 5 thin omitted)
 
-### Community 0 - "quiz.tsx"
-Cohesion: 0.06
-Nodes (71): Phase, QuizScreen(), nextQuestion(), startSession(), submitAnswer(), SCORE_COLOR(), SessionResult, styles (+63 more)
+### Community 0 - "learn.tsx"
+Cohesion: 0.09
+Nodes (63): BLOOM_NAMES, ChatBubble(), ChatMsg, LearnScreen(), loadRecentMessages(), markNextTaught(), onSend(), streamTutor() (+55 more)
 
-### Community 1 - "learn.tsx"
-Cohesion: 0.06
-Nodes (54): COLORS, ProfilesScreen(), handleCreate(), selectStudent(), styles, styles, BLOOM_NAMES, ChatBubble() (+46 more)
+### Community 1 - "llm.ts"
+Cohesion: 0.05
+Nodes (47): openModelPicker(), curriculumFormat, curriculumMessages(), generateCurriculumDraft(), parseCurriculumDraft(), setTopicSubtopics(), Subtopic, gradeFormat (+39 more)
 
 ### Community 2 - "ingest.tsx"
 Cohesion: 0.07
-Nodes (44): IngestScreen(), handleCreateCourse(), handleIngest(), handleProgress(), refreshSubjects(), selectSubject(), styles, Tab (+36 more)
+Nodes (43): IngestScreen(), handleCreateCourse(), handleIngest(), handleProgress(), refreshSubjects(), selectSubject(), styles, Tab (+35 more)
 
-### Community 3 - "LearnScreen()"
-Cohesion: 0.07
-Nodes (45): LearnScreen(), loadRecentMessages(), onSend(), openModelPicker(), streamTutor(), updateLastAssistant(), ChatBubble(), ChatMsg (+37 more)
+### Community 3 - "gamify.ts"
+Cohesion: 0.09
+Nodes (34): ProgressScreen(), addXp(), countClearedGaps(), countMasteredTopics(), grantAchievement(), listAchievements(), listTouchedSubjectIds(), setStreak() (+26 more)
 
 ### Community 4 - "data.ts"
-Cohesion: 0.07
-Nodes (25): db, expo, Achievement, achievements, gaps, KnowledgeChunk, knowledgeChunks, Message (+17 more)
+Cohesion: 0.08
+Nodes (21): db, expo, Achievement, achievements, gaps, KnowledgeChunk, knowledgeChunks, Message (+13 more)
 
-### Community 5 - "gamify.ts"
-Cohesion: 0.15
-Nodes (23): addXp(), countClearedGaps(), countMasteredTopics(), grantAchievement(), listAchievements(), listTouchedSubjectIds(), setStreak(), awardForGrade() (+15 more)
+### Community 5 - "react"
+Cohesion: 0.10
+Nodes (28): COLORS, ProfilesScreen(), handleCreate(), selectStudent(), styles, ProfileAvatar(), Props, styles (+20 more)
 
-### Community 6 - "expo"
+### Community 6 - "react-native"
+Cohesion: 0.09
+Nodes (23): RootLayout(), handleUnlock(), styles, ROW_STYLE, styles, handleBiometricToggle(), Props, styles (+15 more)
+
+### Community 7 - "search.test.tsx"
+Cohesion: 0.14
+Nodes (21): SearchScreen(), styles, getAllTopics(), listChunks(), listSubjects(), retrieveContext(), RetrievedChunk, scoreBm25() (+13 more)
+
+### Community 8 - "expo"
 Cohesion: 0.07
 Nodes (26): backgroundColor, backgroundImage, foregroundImage, monochromeImage, adaptiveIcon, package, predictiveBackGestureEnabled, expo (+18 more)
 
-### Community 7 - "graph.tsx"
+### Community 9 - "setup.tsx"
+Cohesion: 0.13
+Nodes (22): startDownload(), DownloadState, startDownload(), styles, ActiveDownload, deleteModel(), downloadModel(), DownloadProgress (+14 more)
+
+### Community 10 - "package.json"
+Cohesion: 0.11
+Nodes (25): devDependencies, eslint@^9.39.4, jest@~29.7.0, jest-expo@~56.0.5, prettier@^3.8.4, @react-native/jest-preset@^0.86.0, react-test-renderer@^19.2.3, test-renderer@^1.2.0 (+17 more)
+
+### Community 11 - "dependencies"
+Cohesion: 0.08
+Nodes (24): dependencies, babel-preset-expo@~56.0.0, expo-constants@~56.0.18, expo-file-system@^56.0.8, expo-linking@~56.0.14, expo-router@~56.2.11, expo-secure-store@~56.0.4, expo-speech@~56.0.3 (+16 more)
+
+### Community 12 - "settings.test.tsx"
+Cohesion: 0.13
+Nodes (16): removeKey(), deleteApiKey(), getApiKey(), setApiKey(), storeKey(), resolveLlmConfig(), mockGetKey, mockHasConsent (+8 more)
+
+### Community 13 - "voice.test.tsx"
 Cohesion: 0.12
-Nodes (20): KnowledgeMapScreen(), styles, GRAPH_HTML, KnowledgeGraphView(), Props, styles, getMasteryMap(), buildTopicGraph() (+12 more)
+Nodes (17): stopLoop(), speakText(), speechFriendly(), stopSpeaking(), expo-speech, listeners, mockAbort, mockAddMessage (+9 more)
 
-### Community 8 - "ingest.test.ts"
+### Community 14 - "progress.tsx"
 Cohesion: 0.14
-Nodes (19): chunkText(), createSource(), insertKnowledgeChunk(), updateSource(), assertSafeUrl(), extractText(), fetchPageText(), PRIVATE_HOST_PATTERNS (+11 more)
+Nodes (18): BLOOM_NAMES, PHASE_LABELS, styles, Summary, bloomName(), Mastery, Student, Subject (+10 more)
 
-### Community 9 - "openrouter.ts"
-Cohesion: 0.10
-Nodes (17): buildBody(), buildHeaders(), ChatOpts, normalizeModel(), OPENROUTER_BASE, openrouterChatOnce(), openrouterChatStream(), OpenRouterModel (+9 more)
+### Community 15 - "settings.tsx"
+Cohesion: 0.22
+Nodes (18): DownloadState, formatHour(), SettingsScreen(), adjustHour(), cancelDownload(), handleReminderToggle(), handleSpeakRepliesToggle(), loadModels() (+10 more)
 
-### Community 10 - "settings.test.tsx"
-Cohesion: 0.13
-Nodes (20): loadModels(), removeKey(), validateAndSave(), validateAndSave(), deleteApiKey(), getApiKey(), setApiKey(), storeKey() (+12 more)
+### Community 16 - "SetupScreen()"
+Cohesion: 0.23
+Nodes (13): handleCloudConsentToggle(), SetupScreen(), finish(), skip(), toggleConsent(), cloudConsentKey(), grantCloudConsent(), hasCloudConsent() (+5 more)
 
-### Community 11 - "settings.tsx"
-Cohesion: 0.14
-Nodes (20): DownloadState, formatHour(), handleDeleteModel(), startDownload(), styles, startDownload(), resolveLlmConfig(), ActiveDownload (+12 more)
+### Community 18 - "MarkdownText.tsx"
+Cohesion: 0.22
+Nodes (12): ChatBubble(), BlockToken, InlineText(), LATEX_SYMBOLS, MarkdownText(), MarkdownTextProps, parseInline(), preprocessMath() (+4 more)
 
-### Community 12 - "SettingsScreen()"
-Cohesion: 0.16
-Nodes (20): SettingsScreen(), adjustHour(), cancelDownload(), handleCloudConsentToggle(), handleReminderToggle(), handleSpeakRepliesToggle(), updateStudentSpeakReplies(), cancelDailyReminder() (+12 more)
-
-### Community 13 - "setup.tsx"
-Cohesion: 0.17
-Nodes (17): DownloadState, SetupScreen(), finish(), skip(), toggleConsent(), styles, cloudConsentKey(), grantCloudConsent() (+9 more)
-
-### Community 14 - "dependencies"
-Cohesion: 0.09
-Nodes (22): dependencies, babel-preset-expo, drizzle-orm, expo, expo-constants, expo-file-system, expo-linking, expo-local-authentication (+14 more)
-
-### Community 15 - "package.json"
-Cohesion: 0.10
-Nodes (20): main, name, private, version, babel-preset-expo, eslint, expo-constants, expo-file-system (+12 more)
-
-### Community 16 - "prompts.ts"
-Cohesion: 0.19
-Nodes (14): bloomName(), Gap, Mastery, Subject, buildGradeMessages(), buildTutorSystemPrompt(), Focus, masteryBand() (+6 more)
-
-### Community 17 - "biometric.test.ts"
-Cohesion: 0.21
-Nodes (13): RootLayout(), handleUnlock(), handleBiometricToggle(), authenticateWithBiometrics(), getBiometricLockEnabled(), isBiometricAvailable(), setBiometricLockEnabled(), expo-local-authentication (+5 more)
-
-### Community 19 - "devDependencies"
-Cohesion: 0.13
-Nodes (15): devDependencies, drizzle-kit, eslint, eslint-config-expo, eslint-config-prettier, jest, jest-expo, prettier (+7 more)
+### Community 19 - "graph.ts"
+Cohesion: 0.24
+Nodes (10): buildTopicGraph(), GraphEdge, GraphMasteryInput, GraphNode, GraphTopicInput, jsonEscape(), masteryBand, parsePrerequisites() (+2 more)
 
 ### Community 20 - "adaptive.ts"
-Cohesion: 0.26
-Nodes (12): applyGrade(), ApplyGradeResult, clamp(), NextStep, recommendStartTopic(), selectNextTopic(), addGap(), clearGapsForTopic() (+4 more)
+Cohesion: 0.32
+Nodes (11): applyGrade(), ApplyGradeResult, clamp(), NextStep, addGap(), clearGapsForTopic(), markSubtopicQuizzed(), now() (+3 more)
 
-### Community 21 - "adaptive.test.ts"
-Cohesion: 0.17
-Nodes (8): Student, mockGapsArr, mockMasteryMap, mockStudentsMap, mockTopicById, mockTopicsBySubject, mockGetApiKey, mockGetStudent
-
-### Community 22 - "scripts"
+### Community 21 - "scripts"
 Cohesion: 0.17
 Nodes (12): scripts, android, format, ios, lint, metadata:pull, metadata:push, start (+4 more)
 
-### Community 23 - "getMastery()"
-Cohesion: 0.38
-Nodes (10): markNextTaught(), getMastery(), markSubtopicQuizzed(), markSubtopicTaught(), now(), parseProgress(), recomputePhase(), touchStudent() (+2 more)
+### Community 22 - "graph.tsx"
+Cohesion: 0.29
+Nodes (10): KnowledgeMapScreen(), styles, KnowledgeGraphView(), recommendStartTopic(), selectNextTopic(), deleteSubject(), deleteTopic(), getMasteryMap() (+2 more)
 
-### Community 24 - "subtopic-nav.ts"
-Cohesion: 0.33
-Nodes (7): allQuizzed(), findNextSubtopic(), findNextToTeach(), ProgressMap, SubtopicItem, SubtopicProgressEntry, items
+### Community 23 - "updateStudentOndeviceModel()"
+Cohesion: 0.24
+Nodes (10): selectModel(), handleDeleteModel(), saveOrModel(), selectOndeviceModel(), switchProvider(), selectOndeviceModel(), validateAndSave(), updateStudentModel() (+2 more)
 
-### Community 25 - "tsconfig.json"
+### Community 24 - "KnowledgeGraphView.tsx"
+Cohesion: 0.24
+Nodes (7): GRAPH_HTML, Props, styles, CYTOSCAPE_MIN_JS, buildGraphHtml(), react-native-webview@13.16.1, react-native-webview
+
+### Community 25 - "notify.test.ts"
+Cohesion: 0.22
+Nodes (8): expo-notifications@~56.0.18, expo-notifications, mockCancel, mockGetItem, mockGetPerms, mockRequestPerms, mockSchedule, mockSetItem
+
+### Community 26 - "tsconfig.json"
 Cohesion: 0.22
 Nodes (8): expo/tsconfig.base, compilerOptions, paths, strict, types, exclude, extends, include
 
-### Community 26 - "updateStudentOndeviceModel()"
-Cohesion: 0.29
-Nodes (8): selectModel(), saveOrModel(), selectOndeviceModel(), switchProvider(), selectOndeviceModel(), updateStudentModel(), updateStudentOndeviceModel(), updateStudentProvider()
+### Community 27 - "adaptive.test.ts"
+Cohesion: 0.25
+Nodes (6): Gap, mockGapsArr, mockMasteryMap, mockStudentsMap, mockTopicById, mockTopicsBySubject
 
-### Community 27 - "eslint.config.js"
+### Community 28 - "subtopic-nav.ts"
+Cohesion: 0.39
+Nodes (6): allQuizzed(), findNextSubtopic(), ProgressMap, SubtopicItem, SubtopicProgressEntry, items
+
+### Community 29 - "Topic"
+Cohesion: 0.33
+Nodes (4): Topic, recomputePhase(), slugify(), uniqueSubjectId()
+
+### Community 30 - "eslint-config-expo"
 Cohesion: 0.40
-Nodes (4): expoConfig, prettier, eslint-config-expo, eslint-config-prettier
+Nodes (4): eslint-config-expo@^56.0.4, eslint-config-prettier@^10.1.8, eslint-config-expo, eslint-config-prettier
 
-### Community 28 - "jest"
+### Community 31 - "jest"
 Cohesion: 0.40
 Nodes (5): jest, moduleNameMapper, preset, setupFilesAfterEnv, transformIgnorePatterns
 
 ## Knowledge Gaps
-- **15 isolated node(s):** `babel-preset-expo`, `expo-constants`, `expo-linking`, `react-native-screens`, `@react-native/jest-preset` (+10 more)
-  These have ≤1 connection - possible missing edges. (Counts symbols only; 325 node(s) total have ≤1 connection when file, concept and rationale nodes are included.)
-- **6 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
+- **1 isolated node(s):** `expo/tsconfig.base`
+  These have ≤1 connection - possible missing edges. (Counts symbols only; 271 node(s) total have ≤1 connection when file, concept and rationale nodes are included.)
+- **5 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
 
 ## Suggested Questions
 _Questions this graph is uniquely positioned to answer:_
 
-- **Why does `react` connect `learn.tsx` to `quiz.tsx`, `ingest.tsx`, `LearnScreen()`, `graph.tsx`, `settings.test.tsx`, `settings.tsx`, `setup.tsx`, `package.json`?**
-  _High betweenness centrality (0.066) - this node is a cross-community bridge._
-- **What connects `babel-preset-expo`, `expo-constants`, `expo-linking` to the rest of the system?**
-  _15 weakly-connected nodes found - possible documentation gaps or missing edges._
-- **Should `quiz.tsx` be split into smaller, more focused modules?**
-  _Cohesion score 0.05720122574055159 - nodes in this community are weakly interconnected._
-- **Why does `dependencies` connect `dependencies` to `package.json`?**
-  _High betweenness centrality (0.053) - this node is a cross-community bridge._
+- **Why does `react` connect `react` to `learn.tsx`, `ingest.tsx`, `gamify.ts`, `react-native`, `search.test.tsx`, `setup.tsx`, `package.json`, `dependencies`, `settings.test.tsx`, `voice.test.tsx`, `progress.tsx`, `settings.tsx`, `MarkdownText.tsx`, `graph.tsx`, `KnowledgeGraphView.tsx`?**
+  _High betweenness centrality (0.064) - this node is a cross-community bridge._
+- **What connects `expo/tsconfig.base` to the rest of the system?**
+  _1 weakly-connected nodes found - possible documentation gaps or missing edges._
 - **Should `learn.tsx` be split into smaller, more focused modules?**
-  _Cohesion score 0.05662862159789289 - nodes in this community are weakly interconnected._
-- **Why does `getStudent()` connect `quiz.tsx` to `learn.tsx`, `ingest.tsx`, `LearnScreen()`, `data.ts`, `gamify.ts`, `graph.tsx`, `settings.tsx`, `SettingsScreen()`, `setup.tsx`, `adaptive.test.ts`?**
-  _High betweenness centrality (0.037) - this node is a cross-community bridge._
+  _Cohesion score 0.08732394366197183 - nodes in this community are weakly interconnected._
+- **Why does `getStudent()` connect `learn.tsx` to `llm.ts`, `gamify.ts`, `data.ts`, `search.test.tsx`, `setup.tsx`, `settings.test.tsx`, `voice.test.tsx`, `progress.tsx`, `settings.tsx`, `SetupScreen()`, `graph.tsx`?**
+  _High betweenness centrality (0.038) - this node is a cross-community bridge._
+- **Should `llm.ts` be split into smaller, more focused modules?**
+  _Cohesion score 0.05268065268065268 - nodes in this community are weakly interconnected._
+- **Why does `react-native` connect `react-native` to `learn.tsx`, `ingest.tsx`, `react`, `search.test.tsx`, `setup.tsx`, `package.json`, `progress.tsx`, `settings.tsx`, `MarkdownText.tsx`, `graph.tsx`, `KnowledgeGraphView.tsx`?**
+  _High betweenness centrality (0.036) - this node is a cross-community bridge._
 - **Should `ingest.tsx` be split into smaller, more focused modules?**
-  _Cohesion score 0.07080200501253132 - nodes in this community are weakly interconnected._
+  _Cohesion score 0.07337662337662337 - nodes in this community are weakly interconnected._
